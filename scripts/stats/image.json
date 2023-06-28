@@ -1,0 +1,6 @@
+[
+  {
+    "name":"dataflow",
+    "imageUri":"datawyse/datawyse:development"
+  }
+]

@@ -1,0 +1,32 @@
+VERBOSE: true
+GRACEFUL: true
+FORCE_DEV: false
+ENVIRONMENT: development
+
+# database
+DATABASE_NAME: "datawyse"
+DATABASE_URI: "mongodb://localhost:63000"
+
+REDIS_URI: "localhost:6379"
+REDIS_PASSWORD: ""
+REDIS_DB: 1
+
+# app
+APP_MODE: "release"
+SERVICE_NAME: "user"
+REQUEST_TIMEOUT: 10
+SERVICE_TIMEOUT: 5
+DATABASE_TIMEOUT: 5
+GRPC_SERVICE_TIMEOUT: 10
+
+# auth server configuration
+KEYCLOAK_SERVER: "http://localhost:8080"
+KEYCLOAK_REALM: "datawyse"
+KEYCLOAK_CLIENT_ID: "datawyse"
+KEYCLOAK_CLIENT_SECRET: "zeLjGfOCwLOhhXAIy9ze4mdLCpxqu1GY"
+
+# server
+PORT: "3001"
+HOST: "localhost"
+GRPC_PORT: "50001"
+GRPC_HOST: "localhost"
