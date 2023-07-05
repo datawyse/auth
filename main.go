@@ -66,7 +66,7 @@ func main() {
 //
 // // Credentials ...
 // type Credentials struct {
-// 	Username string `json:"username" binding:"required"`
+// 	Email string `json:"username" binding:"required"`
 // 	Password string `json:"password" binding:"required"`
 // }
 //
@@ -252,8 +252,8 @@ func main() {
 // 		}
 //
 // 		// create a keycloak user
-// 		fmt.Println("Creating user with username : ", credentials.Username, token)
-// 		err = createKeycloakUser(credentials.Username, credentials.Password, token)
+// 		fmt.Println("Creating user with username : ", credentials.Email, token)
+// 		err = createKeycloakUser(credentials.Email, credentials.Password, token)
 // 		if err != nil {
 // 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 // 			return
@@ -281,7 +281,7 @@ func main() {
 // 		}
 //
 // 		// get access token from keycloak
-// 		token, err := login(credentials.Username, credentials.Password)
+// 		token, err := login(credentials.Email, credentials.Password)
 // 		if err != nil {
 // 			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 // 			return

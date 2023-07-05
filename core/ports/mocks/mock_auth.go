@@ -37,9 +37,9 @@ func (m *MockAuthService) EXPECT() *MockAuthServiceMockRecorder {
 }
 
 // Login mocks base method.
-func (m *MockAuthService) Login(username, password string) (*domain.AuthToken, error) {
+func (m *MockAuthService) Login(email, password string) (*domain.AuthToken, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Login", username, password)
+	ret := m.ctrl.Call(m, "Login", email, password)
 	ret0, _ := ret[0].(*domain.AuthToken)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1

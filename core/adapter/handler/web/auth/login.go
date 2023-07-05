@@ -33,7 +33,7 @@ func (ctrl *Controller) Login(ctx *gin.Context) {
 		return
 	}
 
-	token, err := ctrl.service.Login(loginInput.Username, loginInput.Password)
+	token, err := ctrl.service.Login(loginInput.Email, loginInput.Password)
 	if err != nil {
 		ctrl.log.Error("error logging in", zap.Error(err))
 

@@ -3,7 +3,7 @@ package http
 import "time"
 
 type LoginInput struct {
-	Username string `json:"username" binding:"required" validate:"required,email"`
+	Email    string `json:"email" binding:"required" validate:"required,email"`
 	Password string `json:"password" binding:"required" validate:"required,min=6"`
 }
 
@@ -12,8 +12,8 @@ type RefreshTokenInput struct {
 }
 
 type SignupInput struct {
-	FirstName string `json:"firstName" binding:"required" validate:"required,min=3,max=32"`
-	LastName  string `json:"lastName" binding:"required" validate:"required,min=3,max=32"`
+	FirstName string `json:"firstName"  validate:"omitempty,min=3,max=32"`
+	LastName  string `json:"lastName"  validate:"omitempty,min=3,max=32"`
 	Email     string `json:"email" binding:"required" validate:"required,email"`
 	Username  string `json:"username" binding:"required" validate:"required,min=3,max=32"`
 	Password  string `json:"password" binding:"required" validate:"required,min=6"`

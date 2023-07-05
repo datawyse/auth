@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func (auth *Service) Login(username string, password string) (*domain.AuthToken, error) {
+func (auth *Service) Login(email string, password string) (*domain.AuthToken, error) {
 	auth.log.Debug("auth.service Login")
 
 	ctx, cancel := context.WithTimeout(auth.ctx, time.Duration(auth.config.ServiceTimeout)*time.Second)
@@ -24,7 +24,7 @@ func (auth *Service) Login(username string, password string) (*domain.AuthToken,
 	keycloakClientSecret := auth.config.KeycloakClientSecret
 
 	client := gocloak.NewClient(keycloakServer)
-	resToken, err := client.Login(ctx, keycloakClientId, keycloakClientSecret, keycloakRealm, username, password)
+	resToken, err := client.Login(ctx, keycloakClientId, keycloakClientSecret, keycloakRealm, email, password)
 	if err != nil {
 		auth.log.Error("login error: ", zap.Error(err))
 
