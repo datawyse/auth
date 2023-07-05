@@ -8,7 +8,7 @@ import (
 	"auth/internal"
 	"auth/internal/app/grpc/interceptors"
 
-	"github.com/datawyse/proto/golang/auth"
+	"github.com/team-management-io/proto/golang/auth"
 	"go.uber.org/fx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

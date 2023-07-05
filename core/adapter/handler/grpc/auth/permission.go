@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/datawyse/proto/golang/auth"
+	"github.com/team-management-io/proto/golang/auth"
 )
 
 type gRPCPermissionService struct {

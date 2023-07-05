@@ -9,7 +9,7 @@ import (
 	"auth/core/ports"
 	"auth/internal"
 
-	"github.com/datawyse/proto/golang/auth"
+	"github.com/team-management-io/proto/golang/auth"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
