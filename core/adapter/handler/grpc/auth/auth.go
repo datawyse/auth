@@ -9,7 +9,7 @@ import (
 	"auth/core/ports"
 	"auth/internal"
 
-	"github.com/team-management-io/proto/golang/auth"
+	"github.com/datawyse/proto/golang/auth"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -36,36 +36,34 @@ func (svc *gRPCAuthService) GetUser(ctx context.Context, req *auth.UserIdRequest
 	defer cancel()
 
 	userId := req.GetUserId()
-	user, err := svc.service.User(userId)
+	user, err := svc.service.User(ctx, userId)
 	if err != nil {
 		return nil, err
 	}
 
-	var roles []string
-	for _, role := range user.Roles {
-		roles = append(roles, role.String())
-	}
+	// var roles []string
+	// for _, role := range user.Roles {
+	// 	roles = append(roles, role.String())
+	// }
 
-	var organizations []string
-	for _, organization := range user.Organizations {
-		organizations = append(organizations, organization.String())
-	}
+	// var organizations []string
+	// for _, organization := range user.Organizations {
+	// 	organizations = append(organizations, organization.String())
+	// }
 
 	createdAt := timestamppb.New(user.CreatedAt)
 	updatedAt := timestamppb.New(user.UpdatedAt)
 
 	// convert user to proto
 	userProto := &auth.User{
-		Id:            user.Id,
-		Username:      *user.Username,
-		Email:         *user.Email,
-		FirstName:     *user.FirstName,
-		LastName:      *user.LastName,
-		Roles:         roles,
-		Organizations: organizations,
-		Subscription:  user.Subscription.String(),
-		CreatedAt:     createdAt,
-		UpdatedAt:     updatedAt,
+		Id:        user.Id,
+		Username:  *user.Username,
+		Email:     *user.Email,
+		FirstName: *user.FirstName,
+		LastName:  *user.LastName,
+		// Organizations: organizations,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
 	}
 
 	return userProto, nil
@@ -104,15 +102,15 @@ func (svc *gRPCAuthService) UpdateUser(ctx context.Context, user *auth.User) (*a
 	svc.log.Debug("input ", zap.Any("input", user))
 
 	userInput := &http.UpdateUserInput{
-		Id:            user.Id,
-		FirstName:     user.FirstName,
-		LastName:      user.LastName,
-		Email:         user.Email,
-		Username:      user.Username,
-		Language:      user.Language,
-		AccountType:   user.AccountType.String(),
-		Roles:         user.Roles,
-		Organizations: user.Organizations,
+		Id:        user.Id,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Email:     user.Email,
+		Username:  user.Username,
+		// Language:      user.Language,
+		// AccountType:   user.AccountType.String(),
+		// Roles:         user.Roles,
+		// Organizations: user.Organizations,
 	}
 
 	result, err := svc.service.UpdateUser(ctx, userInput)

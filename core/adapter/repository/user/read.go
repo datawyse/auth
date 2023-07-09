@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 )
 
@@ -27,4 +28,39 @@ func (repo Repository) User(ctx context.Context, id uuid.UUID) (*domain.User, er
 	}
 
 	return &user, nil
+}
+
+func (repo Repository) Users(ctx context.Context) ([]*domain.User, error) {
+	repo.log.Info("reading users")
+
+	ctx, cancel := context.WithTimeout(repo.ctx, time.Duration(repo.config.DatabaseTimeout)*time.Second)
+	defer cancel()
+
+	var users []*domain.User
+	cursor, err := repo.db.Db.Collection("users").Find(ctx, bson.D{})
+	if err != nil {
+		repo.log.Error("error finding users", zap.Error(err))
+		return nil, err
+	}
+	defer func(cursor *mongo.Cursor, ctx context.Context) {
+		err := cursor.Close(ctx)
+		if err != nil {
+			repo.log.Error("error closing cursor", zap.Error(err))
+		}
+	}(cursor, ctx)
+
+	for cursor.Next(ctx) {
+		var user domain.User
+		if err = cursor.Decode(&user); err != nil {
+			repo.log.Error("error decoding user", zap.Error(err))
+			return nil, err
+		}
+		users = append(users, &user)
+	}
+	if err := cursor.Err(); err != nil {
+		repo.log.Error("error finding users", zap.Error(err))
+		return nil, err
+	}
+
+	return users, nil
 }

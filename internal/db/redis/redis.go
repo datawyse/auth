@@ -12,7 +12,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func NewRedisDb(lifecycle fx.Lifecycle, ctx context.Context, config *internal.AppConfig, log *zap.Logger) (*redis.Client, error) {
+type RedisDb struct {
+	*redis.Client
+}
+
+func NewRedisDb(lifecycle fx.Lifecycle, ctx context.Context, config *internal.AppConfig, log *zap.Logger) (*RedisDb, error) {
 	db, err := strconv.Atoi(config.RedisDb)
 	if err != nil {
 		db = 0
@@ -48,7 +52,19 @@ func NewRedisDb(lifecycle fx.Lifecycle, ctx context.Context, config *internal.Ap
 		},
 	})
 
-	return client, nil
+	return &RedisDb{client}, nil
 }
 
-var RedisModule = NewRedisDb
+// IsHealthy returns health status
+func (database *RedisDb) IsHealthy() (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := database.Ping(ctx).Err(); err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+var Module = NewRedisDb

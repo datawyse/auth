@@ -19,15 +19,10 @@ func (repo Repository) UpdateUser(ctx context.Context, input *domain.User) (*dom
 	// update user
 	filter := bson.D{{"_id", input.Id}}
 	var updateValues bson.D
-	if len(input.Roles) > 0 {
-		updateValues = append(updateValues, bson.E{Key: "roles", Value: input.Roles})
+	if (input.LastSignInAt != time.Time{}) {
+		updateValues = append(updateValues, bson.E{Key: "lastSignInAt", Value: input.LastSignInAt})
 	}
-	if len(input.Organizations) > 0 {
-		updateValues = append(updateValues, bson.E{Key: "organizations", Value: input.Organizations})
-	}
-	if input.Language != "" {
-		updateValues = append(updateValues, bson.E{Key: "language", Value: input.Language})
-	}
+	updateValues = append(updateValues, bson.E{Key: "updatedAt", Value: time.Now()})
 
 	if len(updateValues) == 0 {
 		return input, nil

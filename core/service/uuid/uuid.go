@@ -18,20 +18,20 @@ type Service struct {
 	ctx    context.Context
 }
 
-func NewUUIDService(log *zap.Logger, config *internal.AppConfig, ctx context.Context) ports.UUIDService {
+func NewUUIDService(log *zap.Logger, config *internal.AppConfig, ctx context.Context) (ports.UUIDService, error) {
 	return &Service{
 		log:    log,
 		ctx:    ctx,
 		config: config,
-	}
+	}, nil
 }
 
 func (svc *Service) FromString(id string) (uuid.UUID, error) {
 	return system.ToUUID(id)
 }
 
-func (svc *Service) NewUUID() (uuid.UUID, error) {
-	return system.NewUUID(), nil
+func (svc *Service) NewUUID() uuid.UUID {
+	return system.NewUUID()
 }
 
 func (svc *Service) IsValidUUID(id string) (bool, error) {

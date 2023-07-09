@@ -18,7 +18,7 @@ type Subscription struct {
 	EnterpriseProjects   int8 `mapstructure:"enterprise_projects" bson:"enterprise_projects" json:"enterprise_projects" validate:"required"`       // 0
 }
 
-func NewSubscription() (*Subscription, error) {
+func NewSubscription(subscriptionType string) (*Subscription, error) {
 	subs := &Subscription{
 		BaseCollection:       *system.NewBaseCollection(),
 		Organizations:        1,

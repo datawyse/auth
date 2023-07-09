@@ -15,7 +15,7 @@ import (
 func (ctrl *Controller) Signup(ctx *gin.Context) {
 	ctrl.log.Info("signing up")
 
-	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.RequestTimeout)*time.Second)
+	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
 	defer cancel()
 
 	var signupInput http.SignupInput

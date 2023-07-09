@@ -15,7 +15,7 @@ import (
 func NewGinRouter(engine *gin.Engine, log *zap.Logger) *gin.RouterGroup {
 	log.Info("setting routes to v1")
 
-	v1 := engine.Group("api/v1/auth")
+	v1 := engine.Group("api/v1")
 	return v1
 }
 

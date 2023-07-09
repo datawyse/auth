@@ -10,6 +10,7 @@ import (
 
 func RevisionMiddleware(log *zap.Logger) gin.HandlerFunc {
 	// Revision file contents will be only loaded once per process
+	// and will be shared between all requests
 	data, err := ioutil.ReadFile("REVISION")
 
 	// If we cant read file, just skip to the next request handler
@@ -36,8 +37,11 @@ func RevisionMiddleware(log *zap.Logger) gin.HandlerFunc {
 
 		// Set X-Revision header
 		log.Debug("revision", zap.String("revision", revision))
-
 		c.Writer.Header().Set("X-Revision", revision)
+
+		// set app context
+		c.Set("revision", revision)
+
 		c.Next()
 	}
 }

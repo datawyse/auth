@@ -32,7 +32,7 @@ func Authorization(log *zap.Logger, config *internal.AppConfig) gin.HandlerFunc 
 		log.Info("Authorization middleware")
 
 		// skip authorization for login and register
-		if strings.Contains(ctx.Request.URL.Path, "/auth/user/login") || strings.Contains(ctx.Request.URL.Path, "/auth/user/signup") || strings.Contains(ctx.Request.URL.Path, "/auth/user/refresh-token") || strings.Contains(ctx.Request.URL.Path, "/health") {
+		if strings.Contains(ctx.Request.URL.Path, "/user/login") || strings.Contains(ctx.Request.URL.Path, "/user/signup") || strings.Contains(ctx.Request.URL.Path, "/user/refresh-token") || strings.Contains(ctx.Request.URL.Path, "/health") {
 			ctx.Next()
 			return
 		}

@@ -20,14 +20,14 @@ type Repository struct {
 	*mongo.Collection
 }
 
-func NewUserRepository(log *zap.Logger, ctx context.Context, config *internal.AppConfig, db *mongodb.MongoDb) ports.UserRepository {
+func NewUserRepository(log *zap.Logger, ctx context.Context, config *internal.AppConfig, db *mongodb.MongoDb) (ports.UserRepository, error) {
 	return &Repository{
 		db:         db,
 		log:        log,
 		ctx:        ctx,
 		config:     config,
 		Collection: db.Db.Collection("users"),
-	}
+	}, nil
 }
 
 var RepositoryModule = fx.Provide(NewUserRepository)

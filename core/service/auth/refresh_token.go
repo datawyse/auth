@@ -12,27 +12,27 @@ import (
 	"go.uber.org/zap"
 )
 
-func (auth *Service) RefreshToken(token string) (*domain.AuthToken, error) {
-	auth.log.Debug("auth.service RefreshToken")
+func (svc *Service) RefreshToken(ctx context.Context, token string) (*domain.AuthToken, error) {
+	svc.log.Debug("svc.service RefreshToken")
 
-	ctx, cancel := context.WithTimeout(auth.ctx, time.Duration(auth.config.ServiceTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
 
-	keycloakServer := auth.config.KeycloakServer
-	keycloakRealm := auth.config.KeycloakRealm
-	keycloakClientId := auth.config.KeycloakClientId
-	keycloakClientSecret := auth.config.KeycloakClientSecret
+	keycloakServer := svc.config.KeycloakServer
+	keycloakRealm := svc.config.KeycloakRealm
+	keycloakClientId := svc.config.KeycloakClientId
+	keycloakClientSecret := svc.config.KeycloakClientSecret
 
 	client := gocloak.NewClient(keycloakServer)
 	resToken, err := client.RefreshToken(ctx, token, keycloakClientId, keycloakClientSecret, keycloakRealm)
 	if err != nil {
-		auth.log.Error("login error: ", zap.Error(err))
+		svc.log.Error("login error: ", zap.Error(err))
 
 		if strings.HasPrefix(err.Error(), "401") {
 			return nil, system.ErrInvalidCredentials
 		}
 		if strings.HasPrefix(err.Error(), "400") {
-			return nil, system.ErrInvalidInput
+			return nil, system.ErrInvalidToken
 		}
 
 		return nil, err

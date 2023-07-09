@@ -1,6 +1,6 @@
 -include .env
 
-#VERSION                 := $(shell git describe --tags)
+VERSION                 := $(shell git describe --tags)
 GOCMD                   := go
 GOTEST                  := $(GOCMD) test
 BUILD                   := $(shell git rev-parse --short HEAD)
@@ -31,6 +31,11 @@ run:
 	@echo "starting server ..."
 	@go run main.go serve
 
+watch:
+	@echo "running in watch mode ..."
+	@ulimit -n 1000 #increase the file watch limit, might required on MacOS
+	@reflex -s -r '\.go$$' make run
+
 test:
 	@echo "running test"
 	@go test -v ./...
@@ -43,11 +48,6 @@ build: ## Build the binary file for server
 	@echo "building ..."
 	@go clean -modcache
 	@go build -o $(SERVER_OUT) $(SERVER_PKG_BUILD)
-
-watch:
-	@echo "running in watch mode ..."
-	@ulimit -n 1000 #increase the file watch limit, might required on MacOS
-	@reflex -s -r '\.go$$' make run
 
 ## Help:
 help: ## Show this help.

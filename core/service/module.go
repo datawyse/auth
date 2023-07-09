@@ -4,6 +4,7 @@ import (
 	"auth/core/service/app-validator"
 	"auth/core/service/auth"
 	"auth/core/service/auth-server"
+	"auth/core/service/health"
 	"auth/core/service/subscription"
 	"auth/core/service/user"
 	"auth/core/service/uuid"
@@ -19,4 +20,5 @@ var Module = fx.Options(
 	app_validator.ServiceModule,
 	subscription.ServiceModule,
 	uuid.ServiceModule,
+	health.ServiceModule,
 )

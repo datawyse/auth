@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"context"
-
 	"auth/core/ports"
 	"auth/internal"
 
@@ -13,21 +11,21 @@ import (
 type Service struct {
 	log              *zap.Logger
 	config           *internal.AppConfig
-	ctx              context.Context
 	userPort         ports.UserService
+	uuidPort         ports.UUIDService
 	authServerPort   ports.AuthServerService
 	subscriptionPort ports.SubscriptionService
 }
 
-func NewAuthService(log *zap.Logger, config *internal.AppConfig, ctx context.Context, authServerPort ports.AuthServerService, userServicePort ports.UserService, subscriptionPort ports.SubscriptionService) ports.AuthService {
+func NewAuthService(log *zap.Logger, config *internal.AppConfig, authServerPort ports.AuthServerService, userPort ports.UserService, subscriptionPort ports.SubscriptionService, uuidPort ports.UUIDService) (ports.AuthService, error) {
 	return &Service{
 		log:              log,
-		ctx:              ctx,
 		config:           config,
-		userPort:         userServicePort,
+		uuidPort:         uuidPort,
+		userPort:         userPort,
 		authServerPort:   authServerPort,
 		subscriptionPort: subscriptionPort,
-	}
+	}, nil
 }
 
 var ServiceModule = fx.Provide(NewAuthService)

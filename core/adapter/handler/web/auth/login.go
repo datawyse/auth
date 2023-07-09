@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"context"
+	"time"
+
 	"auth/core/domain/http"
 	"auth/core/domain/system"
 
@@ -10,6 +13,9 @@ import (
 
 func (ctrl *Controller) Login(ctx *gin.Context) {
 	ctrl.log.Debug("/ctrl/login")
+
+	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
+	defer cancel()
 
 	var loginInput http.LoginInput
 	if err := ctx.BindJSON(&loginInput); err != nil {
@@ -33,7 +39,7 @@ func (ctrl *Controller) Login(ctx *gin.Context) {
 		return
 	}
 
-	token, err := ctrl.service.Login(loginInput.Email, loginInput.Password)
+	token, err := ctrl.service.Login(authCtx, loginInput.Email, loginInput.Password)
 	if err != nil {
 		ctrl.log.Error("error logging in", zap.Error(err))
 

@@ -6,82 +6,111 @@ import (
 
 	"auth/core/domain"
 	"auth/core/domain/http"
-	"auth/core/domain/system"
 
 	"github.com/Nerzal/gocloak/v13"
 	"go.uber.org/zap"
 )
 
-func (auth *Service) User(userId string) (*domain.UserInfo, error) {
-	auth.log.Info("auth.service.user")
+func (svc *Service) User(ctx context.Context, userId string) (*domain.UserInfo, error) {
+	svc.log.Info("svc.service.user")
 
-	return auth.userPort.User(userId)
-}
-
-func (auth *Service) UpdateUser(ctx context.Context, input *http.UpdateUserInput) (*domain.User, error) {
-	auth.log.Info("auth.service.user")
-
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(auth.config.ServiceTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
 
-	user := &domain.User{}
+	return svc.userPort.User(ctx, userId)
+}
 
-	userId, err := system.ToUUID(input.Id)
+func (svc *Service) UpdateUser(ctx context.Context, input *http.UpdateUserInput) (*domain.UserInfo, error) {
+	svc.log.Info("svc.service.user")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
+	defer cancel()
+
+	user, err := svc.User(ctx, input.Id)
 	if err != nil {
-		return nil, system.ErrInvalidInput
-	}
-	user.Id = userId
-
-	for _, orgId := range input.Organizations {
-		id, err := system.ToUUID(orgId)
-		if err != nil {
-			return nil, system.ErrInvalidInput
-		}
-		user.Organizations = append(user.Organizations, id)
-	}
-
-	for _, roleId := range input.Roles {
-		id, err := system.ToUUID(roleId)
-		if err != nil {
-			return nil, system.ErrInvalidInput
-		}
-		user.Roles = append(user.Roles, id)
-	}
-	if input.Language != "" {
-		user.Language = input.Language
-	}
-	if input.AccountType != "" {
-		user.AccountType = input.AccountType
-	}
-
-	token, err := auth.authServerPort.AccessToken()
-	if err != nil {
-		auth.log.Error("access token error: ", zap.Error(err))
+		svc.log.Error("error getting user", zap.Error(err))
 		return nil, err
 	}
 
-	keycloakServer := auth.config.KeycloakServer
-	keycloakRealm := auth.config.KeycloakRealm
+	// // for _, orgId := range input.Organizations {
+	// // 	id, err := system.ToUUID(orgId)
+	// // 	if err != nil {
+	// // 		return nil, system.ErrInvalidInput
+	// // 	}
+	// // 	user.Organizations = append(user.Organizations, id)
+	// // }
+	//
+	// // for _, roleId := range input.Roles {
+	// // 	id, err := system.ToUUID(roleId)
+	// // 	if err != nil {
+	// // 		return nil, system.ErrInvalidInput
+	// // 	}
+	// // 	user.Roles = append(user.Roles, id)
+	// // }
+	// // if input.Language != "" {
+	// // 	user.Language = input.Language
+	// // }
+	// // if input.AccountType != "" {
+	// // 	user.AccountType = input.AccountType
+	// // }
+	//
 
-	client := gocloak.NewClient(keycloakServer)
-
-	gocloakUser := gocloak.User{
-		ID: gocloak.StringP(user.Id.String()),
-	}
 	if input.FirstName != "" {
-		gocloakUser.FirstName = gocloak.StringP(input.FirstName)
+		user.KeycloakUser.FirstName = gocloak.StringP(input.FirstName)
 	}
 	if input.LastName != "" {
-		gocloakUser.LastName = gocloak.StringP(input.LastName)
+		user.KeycloakUser.LastName = gocloak.StringP(input.LastName)
 	}
 	if input.Username != "" {
-		gocloakUser.Username = gocloak.StringP(input.Username)
+		user.KeycloakUser.Username = gocloak.StringP(input.Username)
 	}
 	if input.Email != "" {
-		gocloakUser.Email = gocloak.StringP(input.Email)
+		user.KeycloakUser.Email = gocloak.StringP(input.Email)
 	}
 
+	attributes := *user.Attributes
+	for name, attr := range input.Attributes {
+		// if name is not in attributes, add it
+		if _, ok := attributes[name]; !ok {
+			attributes[name] = attr
+		}
+		// if name is in attributes, update it
+		attributes[name] = attr
+	}
+	// loop through all the attributes and remove the ones that are not in input.Attributes
+	for name := range attributes {
+		if _, ok := input.Attributes[name]; !ok {
+			delete(attributes, name)
+		}
+	}
+	user.KeycloakUser.Attributes = &attributes
+
 	// updating user
-	client.UpdateUser(ctx, token, keycloakRealm, gocloakUser)
-	return auth.userPort.UpdateUser(user)
+	client := svc.authServerPort.NewClient(ctx)
+	token, err := svc.authServerPort.AccessToken(ctx)
+	if err != nil {
+		svc.log.Error("access token error: ", zap.Error(err))
+		return nil, err
+	}
+
+	err = client.UpdateUser(ctx, token, svc.config.KeycloakRealm, user.KeycloakUser)
+	if err != nil {
+		svc.log.Error("update user error: ", zap.Error(err))
+		return nil, err
+	}
+
+	systemUser, err := user.ToUser()
+	if err != nil {
+		svc.log.Error("error converting user to system user", zap.Error(err))
+		return nil, err
+	}
+
+	systemUser, err = svc.userPort.UpdateUser(systemUser)
+	if err != nil {
+		svc.log.Error("error updating user", zap.Error(err))
+		return nil, err
+	}
+
+	user.SystemUser = *systemUser
+	return user, nil
 }

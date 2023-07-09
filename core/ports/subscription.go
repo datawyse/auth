@@ -9,8 +9,8 @@ import (
 )
 
 type SubscriptionService interface {
-	CreateSubscription(input *domain.Subscription) (uuid.UUID, error)
-	FindSubscriptionByID(id string) (*domain.Subscription, error)
+	CreateSubscription(ctx context.Context, input *domain.Subscription) (uuid.UUID, error)
+	FindSubscriptionByID(ctx context.Context, id string) (*domain.Subscription, error)
 }
 
 type SubscriptionRepository interface {

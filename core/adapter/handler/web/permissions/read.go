@@ -10,12 +10,15 @@ import (
 func (ctrl Controller) GetPermissions(ctx *gin.Context) {
 	ctrl.log.Info("GetPermissions")
 
-	authPermissions := ctx.MustGet("permissions").([]gocloak.ResourcePermission)
-	res := system.NewHttpResponse(true, "User Permissions", gin.H{
-		"permissions": gin.H{
-			"auth": authPermissions,
-		},
-	})
+	systemPermissions := ctx.MustGet("permissions").([]gocloak.ResourcePermission)
 
+	permissionRes := gin.H{
+		"permissions": gin.H{
+			"system": systemPermissions,
+		},
+	}
+
+	message := "User Permissions"
+	res := system.NewHttpResponse(true, message, permissionRes)
 	ctx.JSON(200, res)
 }

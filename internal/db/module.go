@@ -8,6 +8,6 @@ import (
 )
 
 var Module = fx.Options(
-	fx.Provide(mongodb.MongoModule),
-	fx.Provide(redis.RedisModule),
+	fx.Provide(mongodb.Module),
+	fx.Provide(redis.Module),
 )

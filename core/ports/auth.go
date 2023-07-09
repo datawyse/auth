@@ -12,13 +12,13 @@ type AuthService interface {
 	Signup(ctx context.Context, input *http.SignupInput) (string, error)
 
 	// Login authenticates a user.
-	Login(email string, password string) (*domain.AuthToken, error)
+	Login(ctx context.Context, email, password string) (*domain.AuthToken, error)
 
 	// RefreshToken refreshes a token.
-	RefreshToken(refreshToken string) (*domain.AuthToken, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*domain.AuthToken, error)
 
 	// User returns the current user.
-	User(userId string) (*domain.UserInfo, error)
+	User(ctx context.Context, userId string) (*domain.UserInfo, error)
 
-	UpdateUser(ctx context.Context, input *http.UpdateUserInput) (*domain.User, error)
+	UpdateUser(ctx context.Context, input *http.UpdateUserInput) (*domain.UserInfo, error)
 }

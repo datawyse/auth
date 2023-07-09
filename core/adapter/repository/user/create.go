@@ -32,8 +32,7 @@ func (repo Repository) CreateUser(ctx context.Context, input *domain.User) (uuid
 	}
 
 	repo.log.Info("created index", zap.Any("indexId", indexId))
-
-	input.AccountType = domain.ACCOUNT_ADMIN.String()
+	
 	_, err = repo.db.Db.Collection("users").InsertOne(ctx, *input)
 	if err != nil {
 		repo.log.Error("error inserting user", zap.Error(err))

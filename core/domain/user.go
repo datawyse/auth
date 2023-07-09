@@ -31,16 +31,8 @@ type User struct {
 	// store the base collection as an embedded struct
 	system.BaseCollection `mapstructure:",squash" bson:"inline"`
 
-	Id            uuid.UUID   `mapstructure:"id" bson:"_id" json:"id"`
-	Verified      bool        `mapstructure:"verified" bson:"verified" json:"verified"`
-	Active        bool        `mapstructure:"active" bson:"active" json:"active"`
-	Avatar        string      `mapstructure:"avatar" bson:"avatar,omitempty" json:"avatar"`
-	Language      string      `mapstructure:"language" bson:"language,omitempty" json:"language"`
-	AccountType   string      `mapstructure:"accountType" bson:"accountType,omitempty" json:"accountType"`
-	Roles         []uuid.UUID `mapstructure:"roles" bson:"roles,omitempty" json:"roles"`
-	Organizations []uuid.UUID `mapstructure:"organizations" bson:"organizations,omitempty" json:"organizations"`
-	Subscription  uuid.UUID   `mapstructure:"subscription" bson:"subscription" json:"subscription"`
-	LastSignInAt  time.Time   `mapstructure:"lastSignInAt" bson:"lastSignInAt" json:"lastSignInAt,omitempty"`
+	Id           uuid.UUID `mapstructure:"id" bson:"_id" json:"id"`
+	LastSignInAt time.Time `mapstructure:"lastSignInAt" bson:"lastSignInAt" json:"lastSignInAt,omitempty"`
 }
 
 type KeycloakUser = gocloak.User
@@ -51,12 +43,20 @@ type UserInfo struct {
 	SystemUser
 }
 
+// TypeName implements openapi.Typer interface for Fruit.
+func (info *UserInfo) TypeName() string {
+	return "UserInfo"
+}
+
+// TypeName implements openapi.Typer interface for Fruit.
+func (user *User) TypeName() string {
+	return "User"
+}
+
 func NewUser(authId uuid.UUID) (*User, error) {
 	user := &User{
 		BaseCollection: *system.NewBaseCollection(),
 		Id:             authId,
-		Verified:       false,
-		Active:         true,
 		LastSignInAt:   time.Now(),
 	}
 
@@ -65,10 +65,7 @@ func NewUser(authId uuid.UUID) (*User, error) {
 
 func NewUserInfo(keycloakUser *gocloak.User, systemUser *User) *UserInfo {
 	// remove unwanted fields from keycloak user
-	keycloakUser.Attributes = nil
 	keycloakUser.CreatedTimestamp = nil
-	keycloakUser.EmailVerified = nil
-	keycloakUser.Enabled = nil
 	keycloakUser.FederationLink = nil
 	keycloakUser.DisableableCredentialTypes = nil
 	keycloakUser.Totp = nil
@@ -80,6 +77,25 @@ func NewUserInfo(keycloakUser *gocloak.User, systemUser *User) *UserInfo {
 	}
 }
 
+func (info *UserInfo) ToUser() (*User, error) {
+	id, err := system.ToUUID(info.Id)
+	if err != nil {
+		return nil, system.ErrInvalidInput
+	}
+
+	user := &User{
+		BaseCollection: info.BaseCollection,
+		Id:             id,
+		LastSignInAt:   time.Now(),
+	}
+
+	return user, nil
+}
+
+func (info *UserInfo) toGocloakUser() *gocloak.User {
+	return &info.KeycloakUser
+}
+
 // GetId returns the model id.
 func (user *User) GetId() uuid.UUID {
 	return user.Id
@@ -88,9 +104,4 @@ func (user *User) GetId() uuid.UUID {
 // SetId sets the model id to the provided string value.
 func (user *User) SetId(id uuid.UUID) {
 	user.Id = id
-}
-
-// SetSubscriptionId sets the model subscription to the provided string value.
-func (user *User) SetSubscriptionId(subscription uuid.UUID) {
-	user.Subscription = subscription
 }

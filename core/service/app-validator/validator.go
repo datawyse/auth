@@ -32,11 +32,11 @@ func NewValidator() *validator.Validate {
 	return validate
 }
 
-func NewAppValidator(log *zap.Logger, validator *validator.Validate) *AppValidator {
+func NewAppValidator(log *zap.Logger, validator *validator.Validate) (*AppValidator, error) {
 	return &AppValidator{
 		log:       log,
 		Validator: validator,
-	}
+	}, nil
 }
 
 // ValidationErrors func for show validation errors for each invalid fields.

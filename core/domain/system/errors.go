@@ -9,6 +9,7 @@ var UserAlreadyExistsError = "user already exists"
 var UserNotFoundError = "user not found"
 var InvalidCredentialsError = "invalid credentials"
 var InvalidUUIDError = "invalid uuid"
+var AuthorizationError = "authorization error"
 
 // ApiError - create base error
 type ApiError struct {
@@ -44,6 +45,10 @@ var ErrInvalidToken = &ApiError{Code: 401, Message: InvalidTokenError}
 var ErrServer = &ApiError{Code: 500, Message: ServerError}
 
 var ErrUserAlreadyExists = &ApiError{Code: 409, Message: UserAlreadyExistsError}
+
+var ErrUserNotFound = &ApiError{Code: 404, Message: UserNotFoundError}
+
+var ErrAuthorization = &ApiError{Code: 401, Message: AuthorizationError}
 
 //
 // // ErrNotFound is the error returned when a resource is not found.

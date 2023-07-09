@@ -1,4 +1,4 @@
-package auth
+package profile
 
 import (
 	"context"
@@ -18,6 +18,17 @@ func (ctrl *Controller) UpdateProfile(ctx *gin.Context) {
 	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.RequestTimeout)*time.Second)
 	defer cancel()
 
+	id := ctx.Param("id")
+	if id == "" {
+		ctrl.log.Error("error binding json", zap.Error(system.ErrInvalidInput))
+
+		err := ctx.Error(system.ErrInvalidInput)
+		if err != nil {
+			ctrl.log.Error("error aborting with error", zap.Error(err))
+			return
+		}
+	}
+
 	var updateUserInput http.UpdateUserInput
 	if err := ctx.ShouldBindJSON(&updateUserInput); err != nil {
 		ctrl.log.Error("error binding json", zap.Error(err))
@@ -28,6 +39,7 @@ func (ctrl *Controller) UpdateProfile(ctx *gin.Context) {
 		}
 		return
 	}
+	updateUserInput.Id = id
 
 	err := ctrl.validate.Struct(updateUserInput)
 	if err != nil {

@@ -1,8 +1,6 @@
 package auth
 
 import (
-	"context"
-
 	"auth/core/ports"
 	"auth/internal"
 
@@ -14,21 +12,19 @@ import (
 
 // Controller - health controller
 type Controller struct {
-	log *zap.Logger
-	*internal.AppConfig
-	ctx      context.Context
+	log      *zap.Logger
+	config   *internal.AppConfig
 	validate *validator.Validate
 	service  ports.AuthService
 }
 
 // NewAuthController - new health controller
-func NewAuthController(log *zap.Logger, api *gin.RouterGroup, ctx context.Context, config *internal.AppConfig, authService ports.AuthService) *Controller {
+func NewAuthController(log *zap.Logger, api *gin.RouterGroup, config *internal.AppConfig, authService ports.AuthService) *Controller {
 	controller := &Controller{
-		log:       log,
-		AppConfig: config,
-		ctx:       ctx,
-		validate:  validator.New(),
-		service:   authService,
+		log:      log,
+		config:   config,
+		validate: validator.New(),
+		service:  authService,
 	}
 
 	// Declare routing for specific routes.
@@ -38,8 +34,6 @@ func NewAuthController(log *zap.Logger, api *gin.RouterGroup, ctx context.Contex
 	authRoute.POST("/login", controller.Login)
 	authRoute.POST("/signup", controller.Signup)
 	authRoute.POST("/refresh-token", controller.RefreshToken)
-
-	authRoute.PUT("/profile/:id", controller.UpdateProfile)
 
 	return controller
 }

@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"context"
+	"time"
+
 	"auth/core/domain/system"
 
 	"github.com/gin-gonic/gin"
@@ -10,8 +13,11 @@ import (
 func (ctrl *Controller) Me(ctx *gin.Context) {
 	ctrl.log.Debug("/ctrl/me")
 
+	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
+	defer cancel()
+
 	userId := ctx.MustGet("userId").(string)
-	userProfile, err := ctrl.service.User(userId)
+	userProfile, err := ctrl.service.User(authCtx, userId)
 	if err != nil {
 		ctrl.log.Error("error getting user profile", zap.Error(err))
 

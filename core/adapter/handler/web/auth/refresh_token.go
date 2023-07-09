@@ -1,6 +1,9 @@
 package auth
 
 import (
+	"context"
+	"time"
+
 	"auth/core/domain/http"
 	"auth/core/domain/system"
 
@@ -10,6 +13,9 @@ import (
 
 func (ctrl *Controller) RefreshToken(ctx *gin.Context) {
 	ctrl.log.Debug("/ctrl/login")
+
+	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
+	defer cancel()
 
 	var refreshTokenInput http.RefreshTokenInput
 	if err := ctx.BindJSON(&refreshTokenInput); err != nil {
@@ -33,7 +39,7 @@ func (ctrl *Controller) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	token, err := ctrl.service.RefreshToken(refreshTokenInput.RefreshToken)
+	token, err := ctrl.service.RefreshToken(authCtx, refreshTokenInput.RefreshToken)
 	if err != nil {
 		ctrl.log.Error("error logging in", zap.Error(err))
 
