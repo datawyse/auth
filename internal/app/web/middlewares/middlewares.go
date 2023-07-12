@@ -15,7 +15,7 @@ import (
 func InitMiddleware(ctx context.Context, app *gin.Engine, log *zap.Logger, appConfig *internal.AppConfig, appValidator *app_validator.AppValidator) {
 	config := cors.DefaultConfig()
 	config.AllowCredentials = true
-	config.AllowOrigins = []string{"http://localhost:5555", "http://localhost:9080"}
+	config.AllowOrigins = []string{"http://localhost:5555", "http://localhost:9080", "http://localhost:3000"}
 	app.Use(cors.New(config))
 
 	app.Use(helmet.Default())

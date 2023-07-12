@@ -12,7 +12,7 @@ import (
 type AccountType int
 
 func (a AccountType) String() string {
-	return [...]string{"", "admin", "organization", "guest"}[a]
+	return [...]string{"ACCOUNT_UNSPECIFIED", "ACCOUNT_ADMIN", "ACCOUNT_ORGANIZATION", "ACCOUNT_GUEST"}[a]
 }
 
 func (a AccountType) EnumIndex() int {

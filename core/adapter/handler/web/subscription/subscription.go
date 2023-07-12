@@ -1,4 +1,4 @@
-package subscriptions
+package subscription
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func NewSubscriptionsController(ctx context.Context, api *gin.RouterGroup, log *
 	}
 
 	// Declare routing for specific routes.
-	subscriptionsRoute := api.Group("/subscriptions")
+	subscriptionsRoute := api.Group("/subscription")
 	subscriptionsRoute.GET("", controller.GetSubscriptions)
 
 	return controller, nil

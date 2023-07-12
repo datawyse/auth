@@ -6,6 +6,7 @@ import (
 
 	"auth/core/domain"
 	"auth/core/domain/http"
+	"auth/internal/utils"
 
 	"github.com/Nerzal/gocloak/v13"
 	"go.uber.org/zap"
@@ -74,15 +75,28 @@ func (svc *Service) UpdateUser(ctx context.Context, input *http.UpdateUserInput)
 		if _, ok := attributes[name]; !ok {
 			attributes[name] = attr
 		}
-		// if name is in attributes, update it
-		attributes[name] = attr
-	}
-	// loop through all the attributes and remove the ones that are not in input.Attributes
-	for name := range attributes {
-		if _, ok := input.Attributes[name]; !ok {
+		// check if value is empty (check for length), if so, delete it
+		if len(attr) == 0 {
 			delete(attributes, name)
 		}
+		// if name is in attributes, update it with new value (even if it is empty) and filter it unique
+		oldValue := attributes[name]
+		newValue := attr
+
+		// 	merge both and remove duplicates
+		for _, v := range newValue {
+			if !utils.Contains(oldValue, v) {
+				oldValue = append(oldValue, v)
+			}
+		}
+		attributes[name] = oldValue
 	}
+	// // loop through all the attributes and remove the ones that are not in input.Attributes
+	// for name := range attributes {
+	// 	if _, ok := input.Attributes[name]; !ok {
+	// 		delete(attributes, name)
+	// 	}
+	// }
 	user.KeycloakUser.Attributes = &attributes
 
 	// updating user

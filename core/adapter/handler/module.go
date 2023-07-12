@@ -6,7 +6,7 @@ import (
 	"auth/core/adapter/handler/web/health"
 	"auth/core/adapter/handler/web/permissions"
 	"auth/core/adapter/handler/web/profile"
-	"auth/core/adapter/handler/web/subscriptions"
+	"auth/core/adapter/handler/web/subscription"
 
 	"go.uber.org/fx"
 )
@@ -14,7 +14,7 @@ import (
 var Module = fx.Options(
 	auth.HandlerModule,
 	permissions.HandlerModule,
-	subscriptions.HandlerModule,
+	subscription.HandlerModule,
 	authgrpc.HandlerModule,
 	health.HandlerModule,
 	profile.HandlerModule,

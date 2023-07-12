@@ -2,12 +2,12 @@ package auth
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"auth/core/domain/http"
 	"auth/core/ports"
 	"auth/internal"
+	"auth/internal/utils"
 
 	"github.com/datawyse/proto/golang/auth"
 	"go.uber.org/zap"
@@ -15,23 +15,27 @@ import (
 )
 
 type gRPCAuthService struct {
-	service     ports.AuthService
-	userService ports.UserService
-	log         *zap.Logger
-	config      *internal.AppConfig
+	log                 *zap.Logger
+	config              *internal.AppConfig
+	service             ports.AuthService
+	userService         ports.UserService
+	subscriptionService ports.SubscriptionService
 	auth.UnimplementedAuthServiceServer
 }
 
-func NewAuthGRPCService(service ports.AuthService, userService ports.UserService, log *zap.Logger, config *internal.AppConfig) auth.AuthServiceServer {
+func NewAuthGRPCService(service ports.AuthService, userService ports.UserService, log *zap.Logger, config *internal.AppConfig, subscriptionService ports.SubscriptionService) (auth.AuthServiceServer, error) {
 	return &gRPCAuthService{
-		log:         log,
-		config:      config,
-		service:     service,
-		userService: userService,
-	}
+		log:                 log,
+		config:              config,
+		service:             service,
+		userService:         userService,
+		subscriptionService: subscriptionService,
+	}, nil
 }
 
 func (svc *gRPCAuthService) GetUser(ctx context.Context, req *auth.UserIdRequestAuth) (*auth.User, error) {
+	svc.log.Info("getting user")
+
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.GRPCServiceTimeout)*time.Second)
 	defer cancel()
 
@@ -41,29 +45,27 @@ func (svc *gRPCAuthService) GetUser(ctx context.Context, req *auth.UserIdRequest
 		return nil, err
 	}
 
-	// var roles []string
-	// for _, role := range user.Roles {
-	// 	roles = append(roles, role.String())
-	// }
-
-	// var organizations []string
-	// for _, organization := range user.Organizations {
-	// 	organizations = append(organizations, organization.String())
-	// }
+	attributes := make(map[string]*auth.Attributes)
+	for name, attr := range *user.Attributes {
+		attribute := &auth.Attributes{
+			Attributes: attr,
+		}
+		attributes[name] = attribute
+	}
 
 	createdAt := timestamppb.New(user.CreatedAt)
 	updatedAt := timestamppb.New(user.UpdatedAt)
 
 	// convert user to proto
 	userProto := &auth.User{
-		Id:        user.Id,
-		Username:  *user.Username,
-		Email:     *user.Email,
-		FirstName: *user.FirstName,
-		LastName:  *user.LastName,
-		// Organizations: organizations,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		Id:         user.Id,
+		Username:   *user.Username,
+		Email:      *user.Email,
+		FirstName:  *user.FirstName,
+		LastName:   *user.LastName,
+		CreatedAt:  createdAt,
+		UpdatedAt:  updatedAt,
+		Attributes: attributes,
 	}
 
 	return userProto, nil
@@ -79,7 +81,7 @@ func (svc *gRPCAuthService) CreateUser(ctx context.Context, req *auth.User) (*au
 	signupInput.Email = req.GetEmail()
 	signupInput.FirstName = req.GetFirstName()
 	signupInput.LastName = req.GetLastName()
-	signupInput.Password = req.GetPassword()
+	// signupInput.Password = req.GetPassword()
 	signupInput.Username = req.GetUsername()
 
 	result, err := svc.service.Signup(ctx, &signupInput)
@@ -101,19 +103,49 @@ func (svc *gRPCAuthService) UpdateUser(ctx context.Context, user *auth.User) (*a
 
 	svc.log.Debug("input ", zap.Any("input", user))
 
-	userInput := &http.UpdateUserInput{
-		Id:        user.Id,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Email:     user.Email,
-		Username:  user.Username,
-		// Language:      user.Language,
-		// AccountType:   user.AccountType.String(),
-		// Roles:         user.Roles,
-		// Organizations: user.Organizations,
+	// find user by id
+	userInfo, err := svc.userService.User(ctx, user.Id)
+	if err != nil {
+		svc.log.Error("error getting user", zap.Error(err))
+		return nil, err
 	}
 
-	result, err := svc.service.UpdateUser(ctx, userInput)
+	// get attributes from user
+	// get list of organization ids
+	var organizationIds []string
+	for name, attr := range *userInfo.Attributes {
+		if name == "organizations" {
+			organizationIds = attr
+		}
+	}
+
+	attributes := make(map[string][]string)
+	for name, attr := range user.Attributes {
+		attributes[name] = attr.Attributes
+	}
+
+	// check if new organization has been created or not
+	var isOrgCreated bool = false
+	for name, attr := range attributes {
+		if name == "organizations" {
+			for _, org := range attr {
+				if !utils.Contains(organizationIds, org) {
+					isOrgCreated = true
+				}
+			}
+		}
+	}
+
+	userInput := &http.UpdateUserInput{
+		Id:         user.Id,
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		Email:      user.Email,
+		Username:   user.Username,
+		Attributes: attributes,
+	}
+
+	_, err = svc.service.UpdateUser(ctx, userInput)
 	if err != nil {
 		svc.log.Error("error signing up", zap.Error(err))
 
@@ -121,7 +153,36 @@ func (svc *gRPCAuthService) UpdateUser(ctx context.Context, user *auth.User) (*a
 		return nil, err
 	}
 
-	fmt.Println("result: ", result)
+	// if new organization has been created, update subscription
+	if isOrgCreated {
+
+		// find subscription id
+		var subscriptionId string
+		for name, attr := range user.Attributes {
+			if name == "subscription" {
+				subscriptionId = attr.Attributes[0]
+			}
+		}
+
+		// get user subscription
+		subs, err := svc.subscriptionService.FindSubscriptionByID(ctx, subscriptionId)
+		if err != nil {
+			svc.log.Error("error getting user subscription", zap.Error(err))
+			return nil, err
+		}
+
+		// update subscriptions
+		if err := subs.AddOrganization("free"); err != nil {
+			svc.log.Error("error adding organization to subscription", zap.Error(err))
+			return nil, err
+		}
+
+		if _, err := svc.subscriptionService.UpdateSubscription(ctx, subs); err != nil {
+			svc.log.Error("error updating subscription", zap.Error(err))
+			return nil, err
+		}
+	}
+
 	return user, nil
 }
 
