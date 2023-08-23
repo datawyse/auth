@@ -1,11 +1,9 @@
 package auth
 
 import (
-	"context"
-
 	"auth/core/ports"
 	"auth/internal"
-
+	"context"
 	"github.com/datawyse/proto/golang/auth"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -28,7 +26,7 @@ func NewSubscriptionGRPCService(log *zap.Logger, config *internal.AppConfig, sub
 	}, nil
 }
 
-func (svc *gRPCSubscriptionService) GetSubscription(ctx context.Context, request *auth.SubscriptionRequest) (*auth.Subscription, error) {
+func (svc *gRPCSubscriptionService) GetSubscription(ctx context.Context, request *auth.SubscriptionRequest) (*auth.SubscriptionResponse, error) {
 	svc.log.Info("getting subscription")
 
 	subs, err := svc.subscriptionService.FindSubscriptionByID(ctx, request.SubscriptionId)
@@ -36,10 +34,10 @@ func (svc *gRPCSubscriptionService) GetSubscription(ctx context.Context, request
 		return nil, err
 	}
 
-	return &auth.Subscription{
+	subscription := &auth.Subscription{
 		Id:                       subs.Id.String(),
 		Organizations:            subs.Organizations,
-		ActiveOrganization:       subs.ActiveOrganizations,
+		ActiveOrganizations:      subs.ActiveOrganizations,
 		OrganizationProjects:     subs.OrganizationProjects,
 		PaidProjects:             subs.PaidProjects,
 		FreeProjects:             subs.FreeProjects,
@@ -52,9 +50,14 @@ func (svc *gRPCSubscriptionService) GetSubscription(ctx context.Context, request
 		PausedEnterpriseProjects: subs.PausedEnterpriseProjects,
 		CreatedAt:                timestamppb.New(subs.CreatedAt),
 		UpdatedAt:                timestamppb.New(subs.UpdatedAt),
+	}
+
+	return &auth.SubscriptionResponse{
+		Subscription: subscription,
 	}, nil
 }
 
-func (svc *gRPCSubscriptionService) GetUserSubscription(*auth.UserIdRequestAuth, auth.SubscriptionService_GetUserSubscriptionServer) error {
+func (svc *gRPCSubscriptionService) GetUserSubscription(request *auth.GetUserSubscriptionRequest, server auth.SubscriptionService_GetUserSubscriptionServer) error {
+	//TODO implement me
 	return status.Errorf(codes.Unimplemented, "method GetUserSubscription not implemented")
 }

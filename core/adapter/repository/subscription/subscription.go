@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"auth/core/ports"
 	"auth/internal"
@@ -9,18 +10,17 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Repository struct {
-	log    *zap.Logger
+	log    *otelzap.Logger
 	ctx    context.Context
 	config *internal.AppConfig
 	db     *mongodb.MongoDb
 	*mongo.Collection
 }
 
-func NewSubscriptionRepository(ctx context.Context, log *zap.Logger, config *internal.AppConfig, db *mongodb.MongoDb) (ports.SubscriptionRepository, error) {
+func NewSubscriptionRepository(ctx context.Context, log *otelzap.Logger, config *internal.AppConfig, db *mongodb.MongoDb) (ports.SubscriptionRepository, error) {
 	return &Repository{
 		db:         db,
 		log:        log,

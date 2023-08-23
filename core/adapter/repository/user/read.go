@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain"
@@ -13,10 +14,15 @@ import (
 )
 
 func (repo Repository) User(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	repo.log.Info("reading user")
+	repo.log.Info("finding user")
 
 	ctx, cancel := context.WithTimeout(repo.ctx, time.Duration(repo.config.DatabaseTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(repo.config.ServiceName).Start(ctx, "repository.user.user")
+	defer span.End()
 
 	user := domain.User{}
 	repo.log.Info("reading user from keycloak id ", zap.String("id", id.String()))

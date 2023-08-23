@@ -1,8 +1,13 @@
 package app_validator
 
 import (
+	"auth/core/ports"
+	"auth/internal"
+	"context"
 	"fmt"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
@@ -12,6 +17,7 @@ import (
 
 type AppValidator struct {
 	log       *zap.Logger
+	config    *internal.AppConfig
 	Validator *validator.Validate
 }
 
@@ -32,15 +38,26 @@ func NewValidator() *validator.Validate {
 	return validate
 }
 
-func NewAppValidator(log *zap.Logger, validator *validator.Validate) (*AppValidator, error) {
+func NewAppValidator(log *zap.Logger, config *internal.AppConfig, validator *validator.Validate) (ports.AppValidator, error) {
 	return &AppValidator{
 		log:       log,
+		config:    config,
 		Validator: validator,
 	}, nil
 }
 
 // ValidationErrors func for show validation errors for each invalid fields.
-func (validate *AppValidator) ValidationErrors(err error) map[string]any {
+func (svc *AppValidator) ValidationErrors(ctx context.Context, err error) map[string]any {
+	svc.log.Info("validation errors")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
+	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.app_validator.validation_errors")
+	defer span.End()
+
 	// Define fields map.
 	fields := map[string]any{}
 
@@ -59,20 +76,34 @@ func (validate *AppValidator) ValidationErrors(err error) map[string]any {
 }
 
 // Validate func for validate model fields.
-func (validate *AppValidator) Validate(model any) map[string]any {
-	// Validate model fields.
-	err := validate.Validator.Struct(model)
-	if err != nil {
-		return validate.ValidationErrors(err)
-	}
+func (svc *AppValidator) Validate(ctx context.Context, model interface{}) error {
+	svc.log.Info("validate")
 
-	return nil
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
+	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.app_validator.validate")
+	defer span.End()
+
+	return svc.Validator.Struct(model)
 }
 
 // ValidateUUID func for validate uuid.UUID fields.
-func (validate *AppValidator) ValidateUUID(field string, value string) map[string]any {
+func (svc *AppValidator) ValidateUUID(ctx context.Context, field string, value string) map[string]any {
+	svc.log.Info("uuid from string")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
+	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.app_validator.validate_uuid")
+	defer span.End()
+
 	// Validate uuid.UUID fields.
-	err := validate.Validator.Var(value, "uuid")
+	err := svc.Validator.Var(value, "uuid")
 	if err != nil {
 		return map[string]any{field: "invalid uuid"}
 	}
@@ -81,9 +112,19 @@ func (validate *AppValidator) ValidateUUID(field string, value string) map[strin
 }
 
 // ValidateEmail func for validate email fields.
-func (validate *AppValidator) ValidateEmail(field string, value string) map[string]any {
+func (svc *AppValidator) ValidateEmail(ctx context.Context, field string, value string) map[string]any {
+	svc.log.Info("validate email")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
+	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.app_validator.validate_email")
+	defer span.End()
+
 	// Validate email fields.
-	err := validate.Validator.Var(value, "email")
+	err := svc.Validator.Var(value, "email")
 	if err != nil {
 		return map[string]any{field: "invalid email"}
 	}
@@ -92,9 +133,19 @@ func (validate *AppValidator) ValidateEmail(field string, value string) map[stri
 }
 
 // ValidatePassword func for validate password fields.
-func (validate *AppValidator) ValidatePassword(field string, value string) map[string]any {
+func (svc *AppValidator) ValidatePassword(ctx context.Context, field string, value string) map[string]any {
+	svc.log.Info("validate password")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
+	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.validate.validate_password")
+	defer span.End()
+
 	// Validate password fields.
-	err := validate.Validator.Var(value, "password")
+	err := svc.Validator.Var(value, "password")
 	if err != nil {
 		return map[string]any{field: "invalid password"}
 	}

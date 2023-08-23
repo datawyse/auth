@@ -1,19 +1,25 @@
 package system
 
-var NotFoundError = "not found"
-var AlreadyExistsError = "already exists"
-var InvalidInputError = "invalid input"
-var InvalidTokenError = "invalid token"
-var ServerError = "server error"
-var UserAlreadyExistsError = "user already exists"
-var UserNotFoundError = "user not found"
-var InvalidCredentialsError = "invalid credentials"
-var InvalidUUIDError = "invalid uuid"
-var AuthorizationError = "authorization error"
+import "errors"
+
+var NotFoundError = errors.New("not found")
+var InvalidInputError = errors.New("invalid input")
+var InvalidTokenError = errors.New("invalid token")
+var ServerError = errors.New("server error")
+var UserAlreadyExistsError = errors.New("user already exists")
+var UserNotFoundError = errors.New("user not found")
+var InvalidCredentialsError = errors.New("invalid credentials")
+var InvalidUUIDError = errors.New("invalid uuid")
+var AuthorizationError = errors.New("authorization error")
+var InvalidAuthorizationToken = errors.New("invalid authorization token")
+var RetrospectTokenError = errors.New("retrospect token error")
+var PermissionDeniedError = errors.New("permission denied")
+var ValidationError = errors.New("validation error")
 
 // ApiError - create base error
 type ApiError struct {
 	Code     int    `json:"code,omitempty"`
+	Status   bool   `json:"status,omitempty"`
 	Message  string `json:"message,omitempty"`
 	RawError error  `json:"rawError,omitempty"`
 }
@@ -23,60 +29,34 @@ func (e *ApiError) Error() string {
 	return e.Message
 }
 
-// ErrInvalidUUID
-var ErrInvalidUUID = &ApiError{Code: 400, Message: InvalidUUIDError}
+// ErrInvalidUUID is the error returned when a uuid is invalid.
+var ErrInvalidUUID = &ApiError{Code: 400, Message: InvalidUUIDError.Error()}
 
 // ErrNotFound is the error returned when a resource is not found.
-var ErrNotFound = &ApiError{Code: 404, Message: NotFoundError}
-
-// ErrAlreadyExists is the error returned when a resource already exists.
-var ErrAlreadyExists = &ApiError{Code: 409, Message: AlreadyExistsError}
+var ErrNotFound = &ApiError{Code: 404, Message: NotFoundError.Error()}
 
 // ErrInvalidInput is the error returned when the input is invalid.
-var ErrInvalidInput = &ApiError{Code: 400, Message: InvalidInputError}
+var ErrInvalidInput = &ApiError{Code: 400, Message: InvalidInputError.Error()}
 
 // ErrInvalidCredentials is the error returned when the credentials are invalid.
-var ErrInvalidCredentials = &ApiError{Code: 401, Message: InvalidCredentialsError}
+var ErrInvalidCredentials = &ApiError{Code: 401, Message: InvalidCredentialsError.Error()}
 
 // ErrInvalidToken is the error returned when the token is invalid.
-var ErrInvalidToken = &ApiError{Code: 401, Message: InvalidTokenError}
+var ErrInvalidToken = &ApiError{Code: 401, Message: InvalidTokenError.Error()}
 
 // ErrServer is the error returned when the server has an error.
-var ErrServer = &ApiError{Code: 500, Message: ServerError}
+var ErrServer = &ApiError{Code: 500, Message: ServerError.Error()}
 
-var ErrUserAlreadyExists = &ApiError{Code: 409, Message: UserAlreadyExistsError}
+var ErrUserAlreadyExists = &ApiError{Code: 409, Message: UserAlreadyExistsError.Error()}
 
-var ErrUserNotFound = &ApiError{Code: 404, Message: UserNotFoundError}
+var ErrUserNotFound = &ApiError{Code: 404, Message: UserNotFoundError.Error()}
 
-var ErrAuthorization = &ApiError{Code: 401, Message: AuthorizationError}
+var ErrAuthorization = &ApiError{Code: 401, Message: AuthorizationError.Error()}
 
-//
-// // ErrNotFound is the error returned when a resource is not found.
-// var ErrNotFound = errors.New("not found")
-//
-// // ErrAlreadyExists is the error returned when a resource already exists.
-// var ErrAlreadyExists = errors.New("already exists")
-//
-// // ErrInvalidInput is the error returned when the input is invalid.
-// var ErrInvalidInput = errors.New("invalid input")
-//
-// // ErrUserAlreadyExists is the error returned when a user already exists.
-// var ErrUserAlreadyExists = errors.New("user already exists")
-//
-// // ErrInvalidAuthenticationToken is the error returned when the authentication token is invalid.
-// var ErrInvalidAuthenticationToken = errors.New("invalid authentication token")
-//
-// // ErrInvalidAppContext is the error returned when the app context is invalid.
-// var ErrInvalidAppContext = errors.New("invalid app context")
-//
-// // ErrInvalidCredentials is the error returned when the credentials are invalid.
-// var ErrInvalidCredentials = errors.New("invalid credentials")
-//
-// // ErrInvalidPassword is the error returned when the password is invalid.
-// var ErrInvalidPassword = errors.New("invalid password")
-//
-// // ErrInvalidEmail is the error returned when the email is invalid.
-// var ErrInvalidEmail = errors.New("invalid email")
-//
-// // ErrInvalidUsername is the error returned when the username is invalid.
-// var ErrInvalidUsername = errors.New("invalid username")
+var ErrInvalidAuthorizationToken = &ApiError{Code: 401, Message: InvalidAuthorizationToken.Error()}
+
+var ErrRetrospectToken = &ApiError{Code: 401, Message: RetrospectTokenError.Error()}
+
+var ErrPermissionDenied = &ApiError{Code: 401, Message: PermissionDeniedError.Error()}
+
+var ErrValidationError = &ApiError{Code: 400, Message: ValidationError.Error()}

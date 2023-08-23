@@ -19,6 +19,6 @@ func (ctrl Controller) GetPermissions(ctx *gin.Context) {
 	}
 
 	message := "User Permissions"
-	res := system.NewHttpResponse(true, message, permissionRes)
+	res := system.NewHttpResponse(true, message, permissionRes, 200)
 	ctx.JSON(200, res)
 }

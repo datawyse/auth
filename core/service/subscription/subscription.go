@@ -2,23 +2,23 @@ package subscription
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"auth/core/ports"
 	"auth/internal"
 
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Service struct {
-	log         *zap.Logger
+	log         *otelzap.Logger
 	config      *internal.AppConfig
 	ctx         context.Context
 	repo        ports.SubscriptionRepository
 	uuidService ports.UUIDService
 }
 
-func NewSubscriptionService(ctx context.Context, log *zap.Logger, config *internal.AppConfig, repo ports.SubscriptionRepository, uuidService ports.UUIDService) (ports.SubscriptionService, error) {
+func NewSubscriptionService(ctx context.Context, log *otelzap.Logger, config *internal.AppConfig, repo ports.SubscriptionRepository, uuidService ports.UUIDService) (ports.SubscriptionService, error) {
 	return &Service{
 		log:         log,
 		ctx:         ctx,

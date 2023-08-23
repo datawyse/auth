@@ -62,6 +62,6 @@ func (ctrl Controller) GetSubscriptions(ctx *gin.Context) {
 		return
 	}
 
-	res := system.NewHttpResponse(true, "user subscription", gin.H{"subscription": subscription})
+	res := system.NewHttpResponse(true, "user subscription", gin.H{"subscription": subscription}, 200)
 	ctx.JSON(200, res)
 }

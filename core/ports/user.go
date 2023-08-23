@@ -16,7 +16,7 @@ type UserService interface {
 	User(ctx context.Context, id string) (*domain.UserInfo, error)
 
 	// UpdateUser updates a user
-	UpdateUser(input *domain.User) (*domain.User, error)
+	UpdateUser(ctx context.Context, input *domain.User) (*domain.User, error)
 
 	// UserByEmail returns the user with the given email.
 	UserByEmail(ctx context.Context, email string) (*domain.UserInfo, error)

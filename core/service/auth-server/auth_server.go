@@ -2,6 +2,8 @@ package auth_server
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
 	"time"
 
@@ -12,18 +14,20 @@ import (
 	"auth/internal"
 
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/golang-jwt/jwt/v4"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type Service struct {
-	log              *zap.Logger
+	log              *otelzap.Logger
 	config           *internal.AppConfig
 	uuidPort         ports.UUIDService
 	subscriptionPort ports.SubscriptionService
 }
 
-func NewAuthServerService(log *zap.Logger, ctx context.Context, config *internal.AppConfig, subscriptionPort ports.SubscriptionService, uuidPort ports.UUIDService) (ports.AuthServerService, error) {
+func NewAuthServerService(log *otelzap.Logger, config *internal.AppConfig, subscriptionPort ports.SubscriptionService, uuidPort ports.UUIDService) (ports.AuthServerService, error) {
 	return &Service{
 		log:              log,
 		config:           config,
@@ -32,21 +36,65 @@ func NewAuthServerService(log *zap.Logger, ctx context.Context, config *internal
 	}, nil
 }
 
+func (svc *Service) VerifyToken(ctx context.Context, accessToken string) (*jwt.Token, error) {
+	svc.log.Info("verifying token")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
+	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth_server.verify_token")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("service.name", "authServer.auth_server.VerifyToken"))
+
+	client := svc.NewClient(ctx)
+
+	token, _, err := client.DecodeAccessToken(ctx, accessToken, svc.config.KeycloakRealm)
+	if err != nil {
+		svc.log.Error("decode access token error: ", zap.Error(err))
+
+		if strings.HasPrefix(err.Error(), "401") {
+			return nil, system.ErrInvalidCredentials
+		}
+		if strings.HasPrefix(err.Error(), "400") {
+			return nil, system.ErrInvalidInput
+		}
+	}
+
+	return token, nil
+}
+
 func (svc *Service) NewClient(ctx context.Context) *gocloak.GoCloak {
 	svc.log.Info("creating new client")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
 
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth_server.new_client")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("service.name", "authServer.auth_server.NewClient"))
+
 	client := gocloak.NewClient(svc.config.KeycloakServer)
 	return client
 }
 
 func (svc *Service) Login(ctx context.Context, email, password string) (*gocloak.JWT, error) {
-	svc.log.Info("login")
+	svc.log.Info("auth server login")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth_server.login")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("service.name", "authServer.auth_server.Login"))
 
 	client := svc.NewClient(ctx)
 
@@ -77,8 +125,14 @@ func (svc *Service) AccessToken(ctx context.Context) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
 
-	client := svc.NewClient(ctx)
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth_server.access_token")
+	defer span.End()
 
+	span.SetAttributes(attribute.String("service.name", "authServer.auth_server.AccessToken"))
+
+	client := svc.NewClient(ctx)
 	keycloakRealm := svc.config.KeycloakRealm
 	keycloakClientId := svc.config.KeycloakClientId
 	keycloakClientSecret := svc.config.KeycloakClientSecret
@@ -87,9 +141,6 @@ func (svc *Service) AccessToken(ctx context.Context) (string, error) {
 	if err != nil {
 		svc.log.Error("login client error: ", zap.Error(err))
 
-		// if strings.HasPrefix(err.Error(), "401") {
-		// 	return "", domain.ErrServer
-		// }
 		if strings.HasPrefix(err.Error(), "400") {
 			return "", system.ErrInvalidInput
 		}
@@ -101,8 +152,17 @@ func (svc *Service) AccessToken(ctx context.Context) (string, error) {
 }
 
 func (svc *Service) RetrospectToken(ctx context.Context, accessToken string) (*gocloak.IntroSpectTokenResult, error) {
+	svc.log.Info("retrospecting token")
+
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth_server.retrospect_token")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("service.name", "authServer.auth_server.RetrospectToken"))
 
 	client := svc.NewClient(ctx)
 	keycloakRealm := svc.config.KeycloakRealm
@@ -132,6 +192,13 @@ func (svc *Service) CreateUser(ctx context.Context, input *http.SignupInput) (*g
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth_server.create_user")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("service.name", "authServer.auth_server.CreateUser"))
 
 	// create subscription
 	subscription, err := domain.NewSubscription("free")
@@ -220,8 +287,14 @@ func (svc *Service) GetUserById(ctx context.Context, id string) (*gocloak.User, 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
 
-	client := svc.NewClient(ctx)
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth_server.get_user_by_id")
+	defer span.End()
 
+	span.SetAttributes(attribute.String("service.name", "authServer.auth_server.GetUserById"))
+
+	client := svc.NewClient(ctx)
 	token, err := svc.AccessToken(ctx)
 	if err != nil {
 		svc.log.Error("access token error: ", zap.Error(err))

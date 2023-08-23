@@ -1,9 +1,12 @@
 package ports
 
-import "github.com/google/uuid"
+import (
+	"context"
+	"github.com/google/uuid"
+)
 
 type UUIDService interface {
-	FromString(id string) (uuid.UUID, error)
-	NewUUID() uuid.UUID
-	IsValidUUID(id string) (bool, error)
+	FromString(ctx context.Context, id string) (uuid.UUID, error)
+	NewUUID(ctx context.Context) uuid.UUID
+	IsValidUUID(ctx context.Context, id string) (bool, error)
 }

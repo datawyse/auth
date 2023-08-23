@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"auth/core/ports"
 	"auth/internal"
@@ -9,11 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Controller struct {
-	log         *zap.Logger
+	log         *otelzap.Logger
 	config      *internal.AppConfig
 	ctx         context.Context
 	validate    *validator.Validate
@@ -21,7 +21,7 @@ type Controller struct {
 	userService ports.UserService
 }
 
-func NewSubscriptionsController(ctx context.Context, api *gin.RouterGroup, log *zap.Logger, config *internal.AppConfig, validate *validator.Validate, service ports.SubscriptionService, userService ports.UserService) (*Controller, error) {
+func NewSubscriptionsController(ctx context.Context, api *gin.RouterGroup, log *otelzap.Logger, config *internal.AppConfig, validate *validator.Validate, service ports.SubscriptionService, userService ports.UserService) (*Controller, error) {
 	controller := &Controller{
 		log:         log,
 		config:      config,

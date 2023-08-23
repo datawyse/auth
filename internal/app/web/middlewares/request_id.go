@@ -3,10 +3,11 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.uber.org/zap"
 )
 
-func RequestIdMiddleware(log *zap.Logger) gin.HandlerFunc {
+func RequestIdMiddleware(log *otelzap.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		id, err := uuid.NewUUID()
 		if err != nil {

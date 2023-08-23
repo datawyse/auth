@@ -4,28 +4,135 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/propagation"
+	"go.uber.org/fx/fxevent"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"auth/core"
 	"auth/internal"
 	"auth/internal/app"
 	"auth/internal/app/grpc"
+	"auth/internal/app/grpc/server"
 	"auth/internal/app/web"
 	"auth/internal/db"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/fx"
-	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/credentials"
 )
 
-func StartGRPCServer(lf fx.Lifecycle, log *zap.Logger, grpcServer *grpc.Server, config *internal.AppConfig) {
+var resource *sdkresource.Resource
+var initResourcesOnce sync.Once
+
+func initTracerExporter(config *internal.AppConfig) *otlptrace.Exporter {
+	secureOption := otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, ""))
+	if config.AppMode != "production" {
+		secureOption = otlptracegrpc.WithInsecure()
+	}
+
+	exporter, err := otlptrace.New(
+		context.Background(),
+		otlptracegrpc.NewClient(
+			secureOption,
+			otlptracegrpc.WithEndpoint(config.CollectorURL),
+		),
+	)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return exporter
+}
+
+func initMetricExporter(config *internal.AppConfig) sdkmetric.Exporter {
+	options := []otlpmetricgrpc.Option{
+		otlpmetricgrpc.WithInsecure(),
+		otlpmetricgrpc.WithEndpoint(config.CollectorURL),
+	}
+
+	exporter, err := otlpmetricgrpc.New(context.Background(), options...)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return exporter
+}
+
+func initResource(config *internal.AppConfig) *sdkresource.Resource {
+	initResourcesOnce.Do(func() {
+		extraResources, _ := sdkresource.New(
+			context.Background(),
+			sdkresource.WithOS(),
+			sdkresource.WithProcess(),
+			sdkresource.WithContainer(),
+			sdkresource.WithHost(),
+			sdkresource.WithAttributes(
+				attribute.String("library.language", "go"),
+				attribute.String("app.mode", config.AppMode),
+				attribute.String("app.version", config.AppVersion),
+				attribute.String("service.name", config.ServiceName),
+			),
+		)
+		resource, _ = sdkresource.Merge(
+			sdkresource.Default(),
+			extraResources,
+		)
+	})
+	return resource
+}
+
+func initMeterProvider(config *internal.AppConfig) *sdkmetric.MeterProvider {
+	otelMetricExporter := initMetricExporter(config)
+
+	mp := sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(initResource(config)),
+		sdkmetric.WithReader(sdkmetric.NewPeriodicReader(otelMetricExporter)),
+	)
+	otel.SetMeterProvider(mp)
+	return mp
+}
+
+func initTracerProvider(config *internal.AppConfig) *trace.TracerProvider {
+	otelResource := initResource(config)
+	otelTracerExporter := initTracerExporter(config)
+
+	tp := trace.NewTracerProvider(
+		trace.WithSampler(trace.AlwaysSample()),
+		trace.WithBatcher(otelTracerExporter),
+		trace.WithResource(otelResource),
+	)
+
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp
+}
+
+func StartGRPCServer(lf fx.Lifecycle, log *zap.Logger, grpcServer *server.Server, config *internal.AppConfig) {
+	metric := initMeterProvider(config)
+	tracer := initTracerProvider(config)
+
 	lf.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			fmt.Println("Starting gRPC server")
+			if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
+				log.Fatal(err.Error())
+			}
+
+			log.Info("Starting gRPC server")
 			go func() {
 				log.Info("Starting gRPC server", zap.String("addr", fmt.Sprint(":", config.GRPCPort)))
 				if err := grpcServer.Start(); err != nil {
@@ -36,12 +143,28 @@ func StartGRPCServer(lf fx.Lifecycle, log *zap.Logger, grpcServer *grpc.Server, 
 		},
 		OnStop: func(ctx context.Context) error {
 			log.Info("Stopping gRPC server")
+
+			// stop tracer
+			if err := tracer.Shutdown(ctx); err != nil {
+				log.Error("Failed to stop tracer", zap.Error(err))
+				panic(err)
+			}
+
+			// stop metric
+			if err := metric.Shutdown(ctx); err != nil {
+				log.Error("Failed to stop metric", zap.Error(err))
+				panic(err)
+			}
+
 			return grpcServer.Stop()
 		},
 	})
 }
 
 func StartHTTPServer(lf fx.Lifecycle, log *zap.Logger, router *gin.Engine, authApp app.App, config *internal.AppConfig) {
+	metric := initMeterProvider(config)
+	tracer := initTracerProvider(config)
+
 	srv := &http.Server{
 		Addr:         ":" + config.Port,
 		Handler:      router,
@@ -52,7 +175,12 @@ func StartHTTPServer(lf fx.Lifecycle, log *zap.Logger, router *gin.Engine, authA
 
 	lf.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			fmt.Println("Starting http server")
+			if err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second)); err != nil {
+				log.Fatal(err.Error())
+			}
+
+			log.Info("Starting http server")
+
 			if err := authApp.Bootstrap(log, config); err != nil {
 				log.Fatal(err.Error())
 			}
@@ -78,6 +206,18 @@ func StartHTTPServer(lf fx.Lifecycle, log *zap.Logger, router *gin.Engine, authA
 
 			// shutdown the server with a timeout
 			defer func(authApp app.App, logger *zap.Logger, config *internal.AppConfig) {
+				// stop tracer
+				if err := tracer.Shutdown(ctx); err != nil {
+					logger.Error("Failed to stop tracer", zap.Error(err))
+					panic(err)
+				}
+
+				// stop metric
+				if err := metric.Shutdown(ctx); err != nil {
+					logger.Error("Failed to stop metric", zap.Error(err))
+					panic(err)
+				}
+
 				err := authApp.ResetBootstrapState(logger, config)
 				if err != nil {
 					logger.Error("Failed to reset bootstrap state", zap.Error(err))
@@ -107,8 +247,8 @@ func Serve() *cobra.Command {
 			}
 
 			authServiceApp := fx.New(
-				fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-					return &fxevent.ZapLogger{Logger: log}
+				fx.WithLogger(func(log *otelzap.Logger) fxevent.Logger {
+					return &fxevent.ZapLogger{Logger: log.Logger}
 				}),
 
 				//  provide configFile path as a global dependency for the application
@@ -119,24 +259,35 @@ func Serve() *cobra.Command {
 				),
 
 				fx.Provide(
-					// inject the logger as a global dependency for the application
-					// check for authServiceApp mode and inject the appropriate logger
-					zap.NewDevelopment,
-
 					// inject empty context on application startup
 					fx.Annotate(ctx, fx.As(new(context.Context))),
+				),
 
-					// load the application config
+				fx.Provide(
 					internal.AppConfigModule,
+				),
+
+				fx.Provide(func(config *internal.AppConfig) (*zap.Logger, error) {
+					// inject the logger as a global dependency for the application
+					if config.AppMode == "production" {
+						return zap.NewProduction()
+					}
+					return zap.NewDevelopment()
+				}),
+
+				fx.Provide(
+					// inject the logger as a global dependency for the application
+					otelzap.New,
 				),
 
 				// inject the application database
 				db.Module,
 
-				// inject the gin router
-				web.WebAppModule,
-				grpc.ServerModule,
+				// inject the application services
+				web.Module,
+				grpc.Module,
 
+				// inject the application controllers
 				core.Module,
 
 				// inject the application controllers and register them with the router as routes and handlers for the application services

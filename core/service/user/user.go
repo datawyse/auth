@@ -2,6 +2,8 @@ package user
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain"
@@ -10,12 +12,13 @@ import (
 	"auth/internal"
 
 	"github.com/Nerzal/gocloak/v13"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
 type Service struct {
-	log      *zap.Logger
+	log      *otelzap.Logger
 	ctx      context.Context
 	config   *internal.AppConfig
 	uuidPort ports.UUIDService
@@ -23,7 +26,7 @@ type Service struct {
 	authPort ports.AuthServerService
 }
 
-func NewUserService(log *zap.Logger, ctx context.Context, config *internal.AppConfig, authPort ports.AuthServerService, repo ports.UserRepository, uuidPort ports.UUIDService) (ports.UserService, error) {
+func NewUserService(log *otelzap.Logger, ctx context.Context, config *internal.AppConfig, authPort ports.AuthServerService, repo ports.UserRepository, uuidPort ports.UUIDService) (ports.UserService, error) {
 	return &Service{
 		log:      log,
 		ctx:      ctx,
@@ -40,6 +43,11 @@ func (svc *Service) CreateUser(ctx context.Context, input *domain.User) (string,
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
 
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.user.create_user")
+	defer span.End()
+
 	userId, err := svc.repo.CreateUser(ctx, input)
 	if err != nil {
 		svc.log.Error("error creating user", zap.Error(err))
@@ -49,11 +57,16 @@ func (svc *Service) CreateUser(ctx context.Context, input *domain.User) (string,
 	return userId.String(), err
 }
 
-func (svc *Service) UpdateUser(input *domain.User) (*domain.User, error) {
-	svc.log.Info("creating user")
+func (svc *Service) UpdateUser(ctx context.Context, input *domain.User) (*domain.User, error) {
+	svc.log.Info("updating user")
 
 	ctx, cancel := context.WithTimeout(svc.ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "repository.user.update_user")
+	defer span.End()
 
 	user, err := svc.repo.UpdateUser(ctx, input)
 	if err != nil {
@@ -65,8 +78,15 @@ func (svc *Service) UpdateUser(input *domain.User) (*domain.User, error) {
 }
 
 func (svc *Service) User(ctx context.Context, id string) (*domain.UserInfo, error) {
+	svc.log.Info("finding user")
+
 	ctx, cancel := context.WithTimeout(svc.ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.user.user")
+	defer span.End()
 
 	keycloakUser, err := svc.authPort.GetUserById(ctx, id)
 	if err != nil {
@@ -91,10 +111,18 @@ func (svc *Service) User(ctx context.Context, id string) (*domain.UserInfo, erro
 }
 
 func (svc *Service) UserByEmail(ctx context.Context, email string) (*domain.UserInfo, error) {
-	svc.log.Info("getting user by email")
+	svc.log.Info("finding user by email")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.user.user_by_email")
+	defer span.End()
+
+	svc.log.Info("getting user by email")
+	span.SetAttributes(attribute.String("service.name", "user.user.UserByEmail"))
 
 	keycloakRealm := svc.config.KeycloakRealm
 	client := svc.authPort.NewClient(ctx)
@@ -135,10 +163,15 @@ func (svc *Service) UserByEmail(ctx context.Context, email string) (*domain.User
 }
 
 func (svc *Service) UserByUsername(ctx context.Context, username string) (*domain.UserInfo, error) {
-	svc.log.Info("getting user by email")
+	svc.log.Info("finding user by username")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.user.user_by_username")
+	defer span.End()
 
 	keycloakRealm := svc.config.KeycloakRealm
 	client := svc.authPort.NewClient(ctx)
@@ -179,8 +212,15 @@ func (svc *Service) UserByUsername(ctx context.Context, username string) (*domai
 }
 
 func (svc *Service) Users(ctx context.Context) ([]*domain.UserInfo, error) {
+	svc.log.Info("finding users")
+
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.user.users")
+	defer span.End()
 
 	keycloakServer := svc.config.KeycloakServer
 	keycloakRealm := svc.config.KeycloakRealm

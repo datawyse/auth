@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"auth/core/ports"
 	"auth/internal"
@@ -9,18 +10,17 @@ import (
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Repository struct {
-	log    *zap.Logger
+	log    *otelzap.Logger
 	ctx    context.Context
 	config *internal.AppConfig
 	db     *mongodb.MongoDb
 	*mongo.Collection
 }
 
-func NewUserRepository(log *zap.Logger, ctx context.Context, config *internal.AppConfig, db *mongodb.MongoDb) (ports.UserRepository, error) {
+func NewUserRepository(log *otelzap.Logger, ctx context.Context, config *internal.AppConfig, db *mongodb.MongoDb) (ports.UserRepository, error) {
 	return &Repository{
 		db:         db,
 		log:        log,

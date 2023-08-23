@@ -29,8 +29,6 @@ func (ctrl *Controller) Me(ctx *gin.Context) {
 	}
 
 	message := "user profile details"
-	res := system.NewHttpResponse(true, message, gin.H{
-		"user": userProfile,
-	})
+	res := system.NewHttpResponse(true, message, gin.H{"user": userProfile}, 200)
 	ctx.JSON(200, res)
 }

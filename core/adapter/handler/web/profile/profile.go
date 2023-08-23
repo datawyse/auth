@@ -2,6 +2,7 @@ package profile
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"auth/core/ports"
 	"auth/internal"
@@ -9,11 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Controller struct {
-	log *zap.Logger
+	log *otelzap.Logger
 	*internal.AppConfig
 	ctx         context.Context
 	validate    *validator.Validate
@@ -21,7 +21,7 @@ type Controller struct {
 	userService ports.UserService
 }
 
-func NewProfileController(log *zap.Logger, api *gin.RouterGroup, config *internal.AppConfig, ctx context.Context, authService ports.AuthService, userService ports.UserService) (*Controller, error) {
+func NewProfileController(log *otelzap.Logger, api *gin.RouterGroup, config *internal.AppConfig, ctx context.Context, authService ports.AuthService, userService ports.UserService) (*Controller, error) {
 	controller := &Controller{
 		log:         log,
 		AppConfig:   config,

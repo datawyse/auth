@@ -77,5 +77,5 @@ func (ctrl *Controller) ImportProfiles(ctx *gin.Context) {
 	// create permissions
 
 	message := fmt.Sprintf("import successful")
-	ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"users": "users"}))
+	ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"users": "users"}, 200))
 }

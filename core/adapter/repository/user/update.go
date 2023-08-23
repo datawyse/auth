@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain"
@@ -13,8 +14,13 @@ import (
 func (repo Repository) UpdateUser(ctx context.Context, input *domain.User) (*domain.User, error) {
 	repo.log.Info("updating user")
 
-	ctx, cancel := context.WithTimeout(repo.ctx, time.Duration(repo.config.DatabaseTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(repo.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(repo.config.ServiceName).Start(ctx, "repository.user.update_user")
+	defer span.End()
 
 	// update user
 	filter := bson.D{{"_id", input.Id}}

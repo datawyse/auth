@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"io/ioutil"
 	"strings"
 
@@ -8,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func RevisionMiddleware(log *zap.Logger) gin.HandlerFunc {
+func RevisionMiddleware(log *otelzap.Logger) gin.HandlerFunc {
 	// Revision file contents will be only loaded once per process
 	// and will be shared between all requests
 	data, err := ioutil.ReadFile("REVISION")

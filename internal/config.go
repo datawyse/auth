@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 // AppConfig contains the application configuration
@@ -21,6 +20,7 @@ type AppConfig struct {
 	DatabaseURI          string `mapstructure:"DATABASE_URI" envconfig:"DATABASE_URI" json:"databaseUri,omitempty" default:"mongodb://localhost:27017"`
 	AppMode              string `mapstructure:"APP_MODE" envconfig:"APP_MODE" json:"appMode,omitempty" default:"development"`
 	AppName              string `mapstructure:"APP_MODE" envconfig:"APP_MODE" json:"appName" validate:"required"`
+	AppVersion           string `mapstructure:"APP_VERSION" envconfig:"APP_VERSION" json:"appVersion" validate:"required"`
 	AppUrl               string `mapstructure:"APP_URL" envconfig:"APP_URL" json:"appUrl" validate:"required"`
 	ServiceName          string `mapstructure:"SERVICE_NAME" envconfig:"SERVICE_NAME" json:"serviceName,omitempty" default:"dataflow"`
 	RequestTimeout       int    `mapstructure:"REQUEST_TIMEOUT" envconfig:"REQUEST_TIMEOUT" json:"requestTimeout,omitempty" default:"10"`
@@ -32,6 +32,7 @@ type AppConfig struct {
 	KeycloakRealm        string `mapstructure:"KEYCLOAK_REALM" json:"keycloakRealm,omitempty" envconfig:"KEYCLOAK_REALM" default:"datawyse"`
 	KeycloakClientId     string `mapstructure:"KEYCLOAK_CLIENT_ID" json:"keycloakClientId,omitempty" envconfig:"KEYCLOAK_CLIENT_ID" default:"datawyse"`
 	KeycloakClientSecret string `mapstructure:"KEYCLOAK_CLIENT_SECRET" json:"keycloakClientSecret,omitempty" envconfig:"KEYCLOAK_CLIENT_SECRET"`
+	CollectorURL         string `mapstructure:"COLLECTOR_URL" json:"collectorUrl,omitempty" envconfig:"COLLECTOR_URL" default:"localhost:4317"`
 }
 
 func (appConfig *AppConfig) String() string {
@@ -46,14 +47,11 @@ func (appConfig *AppConfig) String() string {
 	)
 }
 
-func NewConfig(log *zap.Logger, configFile string) (*AppConfig, error) {
-	log.Info("configFile: ", zap.String("configFile", configFile))
-
+func NewConfig(configFile string) (*AppConfig, error) {
 	if configFile != "" {
 		// read the config file from root directory
 		viper.SetConfigType("yml")
 		viper.SetConfigFile(configFile)
-		log.Info(fmt.Sprintf("loading configuration from: %s", configFile))
 	}
 
 	replacer := strings.NewReplacer(".", "_")
@@ -63,14 +61,12 @@ func NewConfig(log *zap.Logger, configFile string) (*AppConfig, error) {
 
 	if configFile != "" {
 		if err := viper.ReadInConfig(); err != nil {
-			log.Error("failed to read config file, using environment variables", zap.Error(err))
 			return nil, err
 		}
 	}
 
 	var appConfig AppConfig
 	if err := viper.Unmarshal(&appConfig); err != nil {
-		log.Error("Error reading config file", zap.Error(err))
 		return nil, err
 	}
 

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain"
@@ -11,10 +12,15 @@ import (
 )
 
 func (svc *Service) Signup(ctx context.Context, input *http.SignupInput) (string, error) {
-	svc.log.Debug("svc.service Signup")
+	svc.log.Debug("signup")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth.signup")
+	defer span.End()
 
 	goClockUser, err := svc.authServerPort.CreateUser(ctx, input)
 	if err != nil {
@@ -23,7 +29,7 @@ func (svc *Service) Signup(ctx context.Context, input *http.SignupInput) (string
 	}
 
 	// create user entry inside database
-	userUUID, err := svc.uuidPort.FromString(*goClockUser.ID)
+	userUUID, err := svc.uuidPort.FromString(ctx, *goClockUser.ID)
 	if err != nil {
 		svc.log.Error("create user error: ", zap.Error(err))
 		return "", err

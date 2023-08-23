@@ -3,13 +3,13 @@ package auth
 import (
 	"auth/core/ports"
 	"auth/internal"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Service struct {
-	log              *zap.Logger
+	log              *otelzap.Logger
 	config           *internal.AppConfig
 	userPort         ports.UserService
 	uuidPort         ports.UUIDService
@@ -17,7 +17,7 @@ type Service struct {
 	subscriptionPort ports.SubscriptionService
 }
 
-func NewAuthService(log *zap.Logger, config *internal.AppConfig, authServerPort ports.AuthServerService, userPort ports.UserService, subscriptionPort ports.SubscriptionService, uuidPort ports.UUIDService) (ports.AuthService, error) {
+func NewAuthService(log *otelzap.Logger, config *internal.AppConfig, authServerPort ports.AuthServerService, userPort ports.UserService, subscriptionPort ports.SubscriptionService, uuidPort ports.UUIDService) (ports.AuthService, error) {
 	return &Service{
 		log:              log,
 		config:           config,

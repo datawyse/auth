@@ -40,5 +40,5 @@ func (ctrl *Controller) GetProfile(ctx *gin.Context) {
 	}
 
 	message := fmt.Sprintf("user details")
-	ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"user": user}))
+	ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"user": user}, 200))
 }

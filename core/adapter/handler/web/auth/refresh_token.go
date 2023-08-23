@@ -28,8 +28,7 @@ func (ctrl *Controller) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	err := ctrl.validate.Struct(refreshTokenInput)
-	if err != nil {
+	if err := ctrl.validate.Validate(authCtx, refreshTokenInput); err != nil {
 		ctrl.log.Error("error validating input", zap.Error(err))
 
 		err = ctx.Error(err)
@@ -51,8 +50,6 @@ func (ctrl *Controller) RefreshToken(ctx *gin.Context) {
 	}
 
 	message := "refresh token successfully refreshed"
-	res := system.NewHttpResponse(true, message, gin.H{
-		"token": token,
-	})
+	res := system.NewHttpResponse(true, message, gin.H{"token": token}, 200)
 	ctx.JSON(200, res)
 }

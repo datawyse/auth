@@ -5,25 +5,24 @@ import (
 	"auth/internal"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-playground/validator/v10"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 // Controller - health controller
 type Controller struct {
-	log      *zap.Logger
+	log      *otelzap.Logger
 	config   *internal.AppConfig
-	validate *validator.Validate
+	validate ports.AppValidator
 	service  ports.AuthService
 }
 
 // NewAuthController - new health controller
-func NewAuthController(log *zap.Logger, api *gin.RouterGroup, config *internal.AppConfig, authService ports.AuthService) *Controller {
+func NewAuthController(log *otelzap.Logger, api *gin.RouterGroup, config *internal.AppConfig, authService ports.AuthService, validator ports.AppValidator) *Controller {
 	controller := &Controller{
 		log:      log,
 		config:   config,
-		validate: validator.New(),
+		validate: validator,
 		service:  authService,
 	}
 

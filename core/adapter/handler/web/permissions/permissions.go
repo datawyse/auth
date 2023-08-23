@@ -2,23 +2,23 @@ package permissions
 
 import (
 	"context"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"auth/internal"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 type Controller struct {
-	log      *zap.Logger
+	log      *otelzap.Logger
 	config   *internal.AppConfig
 	ctx      context.Context
 	validate *validator.Validate
 }
 
-func NewPermissionsController(api *gin.RouterGroup, log *zap.Logger, config *internal.AppConfig, ctx context.Context) *Controller {
+func NewPermissionsController(api *gin.RouterGroup, log *otelzap.Logger, config *internal.AppConfig, ctx context.Context) *Controller {
 	controller := &Controller{
 		log:      log,
 		config:   config,

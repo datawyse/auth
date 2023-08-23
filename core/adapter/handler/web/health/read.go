@@ -3,6 +3,7 @@ package health
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain/system"
@@ -13,10 +14,15 @@ import (
 
 // ReadHealth - web status
 func (ctrl *Controller) ReadHealth(ctx *gin.Context) {
-	ctrl.log.Debug("/ctrl")
+	ctrl.log.Info("/health")
 
 	healthCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(healthCtx)
+	tracerProvider := span.TracerProvider()
+	healthCtx, span = tracerProvider.Tracer(ctrl.config.ServiceName).Start(healthCtx, "adapter.health.read_health")
+	defer span.End()
 
 	healthRes, err := ctrl.service.ReadHealth(healthCtx)
 	if err != nil {
@@ -41,8 +47,6 @@ func (ctrl *Controller) ReadHealth(ctx *gin.Context) {
 	healthRes.Revision = xRevision.(string)
 
 	message := "health status"
-	res := system.NewHttpResponse(true, message, gin.H{
-		"health": healthRes,
-	})
+	res := system.NewHttpResponse(true, message, gin.H{"health": healthRes}, 200)
 	ctx.JSON(200, res)
 }

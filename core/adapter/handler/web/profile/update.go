@@ -64,5 +64,5 @@ func (ctrl *Controller) UpdateProfile(ctx *gin.Context) {
 	}
 
 	message := fmt.Sprintf("user successfully created")
-	ctx.JSON(201, system.NewHttpResponse(true, message, gin.H{"user": user}))
+	ctx.JSON(201, system.NewHttpResponse(true, message, gin.H{"user": user}, 201))
 }

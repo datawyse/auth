@@ -1,4 +1,4 @@
--include .env
+#-include .env
 
 VERSION                 := $(shell git describe --tags)
 GOCMD                   := go

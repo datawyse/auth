@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
@@ -24,7 +25,10 @@ type MongoDb struct {
 func NewMongoDb(lifecycle fx.Lifecycle, ctx context.Context, log *zap.Logger, config *internal.AppConfig) (*MongoDb, error) {
 	log.Info("Connecting to MongoDB", zap.String("url", config.DatabaseURI), zap.String("database", config.DatabaseName))
 
-	client, err := mongo.NewClient(options.Client().ApplyURI(config.DatabaseURI).SetRegistry(UUIDRegistry))
+	opt := options.Client().ApplyURI(config.DatabaseURI).SetRegistry(UUIDRegistry)
+	opt.Monitor = otelmongo.NewMonitor()
+
+	client, err := mongo.NewClient(opt)
 	db := client.Database(config.DatabaseName)
 
 	if err != nil {

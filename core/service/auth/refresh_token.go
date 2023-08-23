@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"strings"
 	"time"
 
@@ -13,10 +14,15 @@ import (
 )
 
 func (svc *Service) RefreshToken(ctx context.Context, token string) (*domain.AuthToken, error) {
-	svc.log.Debug("svc.service RefreshToken")
+	svc.log.Debug("refreshing token")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth.refresh_token")
+	defer span.End()
 
 	keycloakServer := svc.config.KeycloakServer
 	keycloakRealm := svc.config.KeycloakRealm

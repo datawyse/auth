@@ -2,6 +2,7 @@ package subscription
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain"
@@ -16,6 +17,11 @@ func (repo Repository) UpdateSubscription(ctx context.Context, input *domain.Sub
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(repo.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(repo.config.ServiceName).Start(ctx, "repository.subscription.update_subscription")
+	defer span.End()
 
 	// update subscription in db
 	updatedSubscription := bson.D{

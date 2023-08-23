@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 	"net/http"
 	"strings"
 
@@ -27,31 +28,25 @@ func getScopeFromReq(req *http.Request) string {
 	return "read"
 }
 
-func Authorization(log *zap.Logger, config *internal.AppConfig) gin.HandlerFunc {
+func Authorization(log *otelzap.Logger, config *internal.AppConfig) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		log.Info("Authorization middleware")
 
 		// skip authorization for login and register
-		if strings.Contains(ctx.Request.URL.Path, "/user/login") || strings.Contains(ctx.Request.URL.Path, "/user/signup") || strings.Contains(ctx.Request.URL.Path, "/user/refresh-token") || strings.Contains(ctx.Request.URL.Path, "/health") {
+		if strings.Contains(ctx.Request.URL.Path, "/test") || strings.Contains(ctx.Request.URL.Path, "/user/login") || strings.Contains(ctx.Request.URL.Path, "/user/signup") || strings.Contains(ctx.Request.URL.Path, "/user/refresh-token") || strings.Contains(ctx.Request.URL.Path, "/health") {
 			ctx.Next()
 			return
 		}
 
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
-			log.Error("Authorization header is empty")
-
-			apiError := system.NewHttpResponse(false, "Authorization header is empty", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrInvalidAuthorizationToken)
 			return
 		}
 
 		accessToken := strings.Split(authHeader, " ")[1]
 		if accessToken == "" {
-			log.Error("Access token is empty")
-
-			apiError := system.NewHttpResponse(false, "Access token is empty", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrInvalidToken)
 			return
 		}
 
@@ -64,29 +59,20 @@ func Authorization(log *zap.Logger, config *internal.AppConfig) gin.HandlerFunc 
 
 		rtResult, err := client.RetrospectToken(ctx, accessToken, keycloakClientId, keycloakClientSecret, keycloakRealm)
 		if err != nil {
-			log.Error("Retrospect token error: ", zap.Error(err))
-
-			apiError := system.NewHttpResponse(false, "Retrospect token error", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrRetrospectToken)
 			return
 		}
 
 		isValidToken := *rtResult.Active
 		if !isValidToken {
-			log.Error("Token is not valid")
-
-			apiError := system.NewHttpResponse(false, "Token is not valid", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrInvalidToken)
 			return
 		}
 
 		// decode access token
 		user, err := client.GetUserInfo(ctx, accessToken, keycloakRealm)
 		if err != nil {
-			log.Error("Decode access token error: ", zap.Error(err))
-
-			apiError := system.NewHttpResponse(false, "Decode access token error", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrInvalidToken)
 			return
 		}
 
@@ -95,43 +81,33 @@ func Authorization(log *zap.Logger, config *internal.AppConfig) gin.HandlerFunc 
 			Audience: &keycloakClientId,
 		})
 		if err != nil {
-			log.Error("Get requesting party token error: ", zap.Error(err))
-
-			apiError := system.NewHttpResponse(false, "Get requesting party token error", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrInvalidToken)
 			return
 		}
 
 		rptResult, err := client.RetrospectToken(ctx, rpt.AccessToken, keycloakClientId, keycloakClientSecret, keycloakRealm)
 		if err != nil {
-			log.Error("Retrospect token error: ", zap.Error(err))
-
-			apiError := system.NewHttpResponse(false, "Retrospect token error", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrRetrospectToken)
 			return
 		}
 
 		// check if permissions are there in the token and if the user has the permission to access the resource
 		if rptResult.Permissions == nil {
-			log.Error("No permissions found in the token")
-
-			apiError := system.NewHttpResponse(false, "No permissions found in the token", nil)
-			ctx.AbortWithStatusJSON(401, apiError)
+			_ = ctx.Error(system.ErrPermissionDenied)
 			return
 		}
 
 		serviceName := config.ServiceName
 		method := getScopeFromReq(ctx.Request)
 
-		log.Debug("serviceName: ", zap.String("serviceName", serviceName))
-		log.Debug("method: ", zap.String("method", method))
+		log.Debug("serviceName: ", zap.String("serviceName", serviceName), zap.String("method", method))
 
 		for _, permission := range *rptResult.Permissions {
 			resourceName := *permission.RSName
 			log.Debug("resourceName: ", zap.String("resourceName", resourceName))
 
 			if resourceName == serviceName {
-				log.Info("Permission granted for user: ", zap.String("userId", *user.Sub), zap.String("method", method), zap.String("resourceName", resourceName))
+				log.Debug("Permission granted for user: ", zap.String("userId", *user.Sub), zap.String("method", method), zap.String("resourceName", resourceName))
 				for _, scope := range *permission.Scopes {
 					if scope == method {
 
@@ -145,16 +121,12 @@ func Authorization(log *zap.Logger, config *internal.AppConfig) gin.HandlerFunc 
 					}
 				}
 
-				log.Error("Permission denied")
-				apiError := system.NewHttpResponse(false, "Permission denied", nil)
-				ctx.AbortWithStatusJSON(401, apiError)
+				_ = ctx.Error(system.ErrPermissionDenied)
 				return
 			}
 		}
 
-		log.Error("Permission denied")
-		apiError := system.NewHttpResponse(false, "Permission denied", nil)
-		ctx.AbortWithStatusJSON(401, apiError)
+		_ = ctx.Error(system.ErrPermissionDenied)
 		return
 	}
 }

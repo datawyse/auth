@@ -46,7 +46,7 @@ func (ctrl *Controller) SearchProfile(ctx *gin.Context) {
 		}
 
 		message := fmt.Sprintf("user details")
-		ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"user": user}))
+		ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"user": user}, 200))
 	} else {
 		user, err := ctrl.userService.UserByEmail(profileCtx, email)
 		if err != nil {
@@ -60,6 +60,6 @@ func (ctrl *Controller) SearchProfile(ctx *gin.Context) {
 		}
 
 		message := fmt.Sprintf("user details")
-		ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"user": user}))
+		ctx.JSON(200, system.NewHttpResponse(true, message, gin.H{"user": user}, 200))
 	}
 }

@@ -1,6 +1,7 @@
-package web
+package server
 
 import (
+	"auth/core/domain/system"
 	"context"
 
 	"auth/internal"
@@ -29,9 +30,11 @@ func NewWebEngine(ctx context.Context, config *internal.AppConfig, log *zap.Logg
 	}
 
 	engine := gin.Default()
-	engine.SetTrustedProxies(nil)
 	engine.RedirectFixedPath = true
 	engine.RedirectTrailingSlash = false
+	if err := engine.SetTrustedProxies(nil); err != nil {
+		return nil, err
+	}
 
 	// update engine context
 	engine.Use(func(ctx *gin.Context) {
@@ -49,6 +52,12 @@ func NewWebEngine(ctx context.Context, config *internal.AppConfig, log *zap.Logg
 		return nil, err
 	}
 
+	// 404 router
+	engine.NoRoute(func(ctx *gin.Context) {
+		ctx.Error(system.ErrNotFound)
+		return
+	})
+
 	return engine, nil
 }
 
@@ -56,5 +65,3 @@ var EngineModule = fx.Provide(NewWebEngine)
 var ServiceAppModule = fx.Provide(app.AppModule)
 var GinRouterModule = fx.Provide(NewGinRouter)
 var MiddlewareModule = fx.Options(fx.Invoke(middlewares.InitMiddleware))
-
-var WebAppModule = fx.Options(ServiceAppModule, EngineModule, GinRouterModule, MiddlewareModule)

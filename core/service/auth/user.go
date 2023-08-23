@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain"
@@ -13,19 +14,29 @@ import (
 )
 
 func (svc *Service) User(ctx context.Context, userId string) (*domain.UserInfo, error) {
-	svc.log.Info("svc.service.user")
+	svc.log.Info("finding user")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth.user")
+	defer span.End()
 
 	return svc.userPort.User(ctx, userId)
 }
 
 func (svc *Service) UpdateUser(ctx context.Context, input *http.UpdateUserInput) (*domain.UserInfo, error) {
-	svc.log.Info("svc.service.user")
+	svc.log.Info("updating user")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth.update_user")
+	defer span.End()
 
 	user, err := svc.User(ctx, input.Id)
 	if err != nil {
@@ -119,7 +130,7 @@ func (svc *Service) UpdateUser(ctx context.Context, input *http.UpdateUserInput)
 		return nil, err
 	}
 
-	systemUser, err = svc.userPort.UpdateUser(systemUser)
+	systemUser, err = svc.userPort.UpdateUser(ctx, systemUser)
 	if err != nil {
 		svc.log.Error("error updating user", zap.Error(err))
 		return nil, err

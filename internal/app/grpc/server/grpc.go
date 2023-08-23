@@ -1,16 +1,17 @@
-package grpc
+package server
 
 import (
+	"auth/internal/app/grpc/interceptors"
 	"fmt"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"log"
 	"net"
 
 	"auth/core/ports"
 	"auth/internal"
-	"auth/internal/app/grpc/interceptors"
-
 	"github.com/datawyse/proto/golang/auth"
 	"go.uber.org/fx"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
@@ -23,12 +24,10 @@ type Server struct {
 	subscriptionServiceServer auth.SubscriptionServiceServer
 }
 
-func NewGRPCServer(config *internal.AppConfig, authServiceServer auth.AuthServiceServer, subscriptionServiceServer auth.SubscriptionServiceServer, authServer ports.AuthServerService) *Server {
+func NewGRPCServer(config *internal.AppConfig, log *zap.Logger, authServiceServer auth.AuthServiceServer, subscriptionServiceServer auth.SubscriptionServiceServer, authServer ports.AuthServerService) (*Server, error) {
 	var opts []grpc.ServerOption
-
-	opts = append(opts, grpc.StreamInterceptor(interceptors.StreamInterceptor))
-	// opts = append(opts, grpc.UnaryInterceptor(interceptors.KeycloakAuthorizationInterceptor(authServer)))
-
+	opts = append(opts, grpc.ChainUnaryInterceptor(otelgrpc.UnaryServerInterceptor(), interceptors.UnaryInterceptor(authServer, log)))
+	opts = append(opts, grpc.ChainStreamInterceptor(otelgrpc.StreamServerInterceptor(), interceptors.StreamInterceptor(authServer, log)))
 	grpcServer := grpc.NewServer(opts...)
 
 	return &Server{
@@ -36,7 +35,7 @@ func NewGRPCServer(config *internal.AppConfig, authServiceServer auth.AuthServic
 		server:                    grpcServer,
 		authServiceServer:         authServiceServer,
 		subscriptionServiceServer: subscriptionServiceServer,
-	}
+	}, nil
 }
 
 func (s *Server) Start() error {
@@ -58,4 +57,4 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-var ServerModule = fx.Provide(NewGRPCServer)
+var Module = fx.Provide(NewGRPCServer)

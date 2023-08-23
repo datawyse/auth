@@ -2,18 +2,27 @@ package auth
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/trace"
 	"time"
 
 	"auth/core/domain"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 )
 
 func (svc *Service) Login(ctx context.Context, email, password string) (*domain.AuthToken, error) {
-	svc.log.Debug("svc.service Login")
+	svc.log.Debug("login")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
+
+	span := trace.SpanFromContext(ctx)
+	tracerProvider := span.TracerProvider()
+	ctx, span = tracerProvider.Tracer(svc.config.ServiceName).Start(ctx, "service.auth.login")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("service.name", "auth.Login"))
 
 	resToken, err := svc.authServerPort.Login(ctx, email, password)
 	if err != nil {
@@ -21,11 +30,11 @@ func (svc *Service) Login(ctx context.Context, email, password string) (*domain.
 		return nil, err
 	}
 
-	accessToken := resToken.AccessToken
-	refreshToken := resToken.RefreshToken
+	idToken := resToken.IDToken
 	tokenType := resToken.TokenType
 	expiredIn := resToken.ExpiresIn
-	idToken := resToken.IDToken
+	accessToken := resToken.AccessToken
+	refreshToken := resToken.RefreshToken
 
 	// perform user last login update
 	user, err := svc.userPort.UserByEmail(ctx, email)
@@ -41,7 +50,7 @@ func (svc *Service) Login(ctx context.Context, email, password string) (*domain.
 	}
 
 	systemUser.LastSignInAt = time.Now()
-	systemUser, err = svc.userPort.UpdateUser(systemUser)
+	systemUser, err = svc.userPort.UpdateUser(ctx, systemUser)
 	if err != nil {
 		svc.log.Error("error updating user", zap.Error(err))
 		return nil, err

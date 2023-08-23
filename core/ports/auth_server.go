@@ -6,6 +6,7 @@ import (
 	"auth/core/domain/http"
 
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type AuthServerService interface {
@@ -22,4 +23,7 @@ type AuthServerService interface {
 
 	// RetrospectToken get permissions with roles
 	RetrospectToken(ctx context.Context, accessToken string) (*gocloak.IntroSpectTokenResult, error)
+
+	// VerifyToken verify token
+	VerifyToken(ctx context.Context, accessToken string) (*jwt.Token, error)
 }

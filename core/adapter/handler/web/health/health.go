@@ -2,32 +2,29 @@ package health
 
 import (
 	"auth/core/ports"
-	"auth/core/service/app-validator"
 	"auth/internal"
 	"auth/internal/db/mongodb"
+	"github.com/uptrace/opentelemetry-go-extra/otelzap"
 
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
-	"go.uber.org/zap"
 )
 
 // Controller - health controller
 type Controller struct {
-	log          *zap.Logger
-	config       *internal.AppConfig
-	db           *mongodb.MongoDb
-	appValidator *app_validator.AppValidator
-	service      ports.HealthService
+	log     *otelzap.Logger
+	config  *internal.AppConfig
+	db      *mongodb.MongoDb
+	service ports.HealthService
 }
 
 // NewHealthCtrl - new health controller
-func NewHealthCtrl(log *zap.Logger, config *internal.AppConfig, api *gin.RouterGroup, db *mongodb.MongoDb, healthService ports.HealthService, validator *app_validator.AppValidator) *Controller {
+func NewHealthCtrl(log *otelzap.Logger, config *internal.AppConfig, api *gin.RouterGroup, db *mongodb.MongoDb, healthService ports.HealthService) *Controller {
 	controller := &Controller{
-		log:          log,
-		config:       config,
-		db:           db,
-		appValidator: validator,
-		service:      healthService,
+		log:     log,
+		config:  config,
+		db:      db,
+		service: healthService,
 	}
 
 	// Declare routing for specific routes.
