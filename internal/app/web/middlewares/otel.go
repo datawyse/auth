@@ -17,8 +17,8 @@ func GetIDMiddleware(log *otelzap.Logger) gin.HandlerFunc {
 			c.Writer.Header().Set("X-Trace-ID", TraceID)
 			c.Writer.Header().Set("X-Span-ID", SpanID)
 
-			log.Ctx(c.Request.Context()).Info("span id: ", zap.String("span_id", SpanID))
 			log.Ctx(c.Request.Context()).Info("trace id: ", zap.String("trace_id", TraceID))
+			log.Ctx(c.Request.Context()).Info("span id: ", zap.String("span_id", SpanID))
 		}
 	}
 }

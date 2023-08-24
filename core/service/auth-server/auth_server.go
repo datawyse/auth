@@ -222,7 +222,7 @@ func (svc *Service) CreateUser(ctx context.Context, input *http.SignupInput) (*g
 	}
 
 	// create user
-	svc.log.Debug("creating user in keycloak")
+	svc.log.Info("creating user in keycloak")
 	userAttributes := &map[string][]string{
 		"origin":       []string{"datawyse.io"},
 		"language":     []string{"en"},

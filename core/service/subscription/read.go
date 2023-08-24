@@ -9,7 +9,7 @@ import (
 )
 
 func (svc Service) FindSubscriptionByID(ctx context.Context, id string) (*domain.Subscription, error) {
-	svc.log.Debug("finding subscription by id")
+	svc.log.Info("finding subscription by id")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()

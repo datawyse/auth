@@ -12,7 +12,7 @@ import (
 )
 
 func (ctrl *Controller) RefreshToken(ctx *gin.Context) {
-	ctrl.log.Debug("/ctrl/login")
+	ctrl.log.Info("refreshing token")
 
 	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
 	defer cancel()

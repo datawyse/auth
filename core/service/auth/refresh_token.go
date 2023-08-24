@@ -14,7 +14,7 @@ import (
 )
 
 func (svc *Service) RefreshToken(ctx context.Context, token string) (*domain.AuthToken, error) {
-	svc.log.Debug("refreshing token")
+	svc.log.Info("refreshing token")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()

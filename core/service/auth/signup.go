@@ -12,7 +12,7 @@ import (
 )
 
 func (svc *Service) Signup(ctx context.Context, input *http.SignupInput) (string, error) {
-	svc.log.Debug("signup")
+	svc.log.Info("signup")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()
@@ -48,6 +48,6 @@ func (svc *Service) Signup(ctx context.Context, input *http.SignupInput) (string
 		return "", err
 	}
 
-	svc.log.Debug("user created", zap.String("userId", userId))
+	svc.log.Info("user created", zap.String("userId", userId))
 	return *goClockUser.ID, nil
 }

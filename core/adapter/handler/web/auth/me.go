@@ -11,7 +11,7 @@ import (
 )
 
 func (ctrl *Controller) Me(ctx *gin.Context) {
-	ctrl.log.Debug("/ctrl/me")
+	ctrl.log.Info("me")
 
 	authCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
 	defer cancel()

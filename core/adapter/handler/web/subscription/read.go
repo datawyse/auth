@@ -12,7 +12,7 @@ import (
 )
 
 func (ctrl Controller) GetSubscriptions(ctx *gin.Context) {
-	ctrl.log.Debug("/ctrl/subscriptions")
+	ctrl.log.Info("get subscriptions")
 
 	subsCtx, cancel := context.WithTimeout(ctx.Request.Context(), time.Duration(ctrl.config.RequestTimeout)*time.Second)
 	defer cancel()

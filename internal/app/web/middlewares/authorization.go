@@ -35,18 +35,19 @@ func Authorization(log *otelzap.Logger, config *internal.AppConfig) gin.HandlerF
 		// skip authorization for login and register
 		if strings.Contains(ctx.Request.URL.Path, "/test") || strings.Contains(ctx.Request.URL.Path, "/user/login") || strings.Contains(ctx.Request.URL.Path, "/user/signup") || strings.Contains(ctx.Request.URL.Path, "/user/refresh-token") || strings.Contains(ctx.Request.URL.Path, "/health") {
 			ctx.Next()
-			return
 		}
 
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
 			_ = ctx.Error(system.ErrInvalidAuthorizationToken)
+			ctx.Next()
 			return
 		}
 
 		accessToken := strings.Split(authHeader, " ")[1]
 		if accessToken == "" {
 			_ = ctx.Error(system.ErrInvalidToken)
+			ctx.Next()
 			return
 		}
 
@@ -60,12 +61,14 @@ func Authorization(log *otelzap.Logger, config *internal.AppConfig) gin.HandlerF
 		rtResult, err := client.RetrospectToken(ctx, accessToken, keycloakClientId, keycloakClientSecret, keycloakRealm)
 		if err != nil {
 			_ = ctx.Error(system.ErrRetrospectToken)
+			ctx.Next()
 			return
 		}
 
 		isValidToken := *rtResult.Active
 		if !isValidToken {
 			_ = ctx.Error(system.ErrInvalidToken)
+			ctx.Next()
 			return
 		}
 
@@ -73,6 +76,7 @@ func Authorization(log *otelzap.Logger, config *internal.AppConfig) gin.HandlerF
 		user, err := client.GetUserInfo(ctx, accessToken, keycloakRealm)
 		if err != nil {
 			_ = ctx.Error(system.ErrInvalidToken)
+			ctx.Next()
 			return
 		}
 
@@ -82,18 +86,21 @@ func Authorization(log *otelzap.Logger, config *internal.AppConfig) gin.HandlerF
 		})
 		if err != nil {
 			_ = ctx.Error(system.ErrInvalidToken)
+			ctx.Next()
 			return
 		}
 
 		rptResult, err := client.RetrospectToken(ctx, rpt.AccessToken, keycloakClientId, keycloakClientSecret, keycloakRealm)
 		if err != nil {
 			_ = ctx.Error(system.ErrRetrospectToken)
+			ctx.Next()
 			return
 		}
 
 		// check if permissions are there in the token and if the user has the permission to access the resource
 		if rptResult.Permissions == nil {
 			_ = ctx.Error(system.ErrPermissionDenied)
+			ctx.Next()
 			return
 		}
 
@@ -117,16 +124,17 @@ func Authorization(log *otelzap.Logger, config *internal.AppConfig) gin.HandlerF
 						ctx.Set("permissions", *rptResult.Permissions)
 
 						ctx.Next()
-						return
 					}
 				}
 
 				_ = ctx.Error(system.ErrPermissionDenied)
+				ctx.Next()
 				return
 			}
 		}
 
 		_ = ctx.Error(system.ErrPermissionDenied)
+		ctx.Next()
 		return
 	}
 }

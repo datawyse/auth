@@ -14,16 +14,20 @@ import (
 
 func ErrorHandler(log *otelzap.Logger, appValidator ports.AppValidator) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		ctx.Next()
+		// check if there was an error
+		if len(ctx.Errors) == 0 {
+			ctx.Next()
+		}
 
 		// check if errors are validator.ValidationErrors
 		for _, ginErr := range ctx.Errors {
 			var validationErrors validator.ValidationErrors
 			if errors.As(ginErr.Err, &validationErrors) {
 				// extract the field and error message for each error
-				validationErrors := appValidator.ValidationErrors(context.Background(), validationErrors)
-				apiErrorResponse := system.NewHttpResponse(false, system.ErrValidationError.Message, validationErrors, system.ErrValidationError.Code)
+				validErrors := appValidator.ValidationErrors(context.Background(), validationErrors)
+				apiErrorResponse := system.NewHttpResponse(false, system.ErrValidationError.Message, validErrors, system.ErrValidationError.Code)
 				ctx.JSON(http.StatusBadRequest, apiErrorResponse)
+				ctx.Abort()
 				return
 			}
 
@@ -32,11 +36,13 @@ func ErrorHandler(log *otelzap.Logger, appValidator ports.AppValidator) gin.Hand
 			if errors.As(ginErr.Err, &apiError) {
 				apiErrorResponse := system.NewHttpResponse(false, apiError.Message, nil, apiError.Code)
 				ctx.JSON(apiError.Code, apiErrorResponse)
+				ctx.Abort()
 				return
 			}
 
 			apiErrorResponse := system.NewHttpResponse(false, ginErr.Error(), nil, 400)
 			ctx.JSON(http.StatusBadRequest, apiErrorResponse)
+			ctx.Abort()
 			return
 		}
 	}

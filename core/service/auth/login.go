@@ -12,7 +12,7 @@ import (
 )
 
 func (svc *Service) Login(ctx context.Context, email, password string) (*domain.AuthToken, error) {
-	svc.log.Debug("login")
+	svc.log.Info("login")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(svc.config.ServiceTimeout)*time.Second)
 	defer cancel()

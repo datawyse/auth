@@ -54,7 +54,7 @@ func NewWebEngine(ctx context.Context, config *internal.AppConfig, log *zap.Logg
 
 	// 404 router
 	engine.NoRoute(func(ctx *gin.Context) {
-		ctx.Error(system.ErrNotFound)
+		_ = ctx.Error(system.ErrNotFound)
 		return
 	})
 

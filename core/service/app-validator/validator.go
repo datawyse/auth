@@ -63,7 +63,7 @@ func (svc *AppValidator) ValidationErrors(ctx context.Context, err error) map[st
 
 	// Make error message for each invalid field.
 	for _, err := range err.(validator.ValidationErrors) {
-		errMsg := fmt.Sprintf("validation failed on '%s' tag", err.Tag())
+		errMsg := fmt.Sprintf("validation failed on '%s' field", err.Tag())
 		param := err.Param()
 		if param != "" {
 			errMsg = fmt.Sprintf("%s. allow: %s", errMsg, param)
